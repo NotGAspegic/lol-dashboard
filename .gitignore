@@ -1,0 +1,12 @@
+# Environments
+.env
+.venv/
+venv/
+__pycache__/
+
+# Node
+node_modules/
+.next/
+
+# DB Data
+pgdata/
