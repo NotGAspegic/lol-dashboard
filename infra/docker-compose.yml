@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -30,6 +30,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  adminer:
+    image: adminer:latest
+    container_name: lol_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   api:
     image: python:3.11-slim
@@ -51,5 +61,5 @@ services:
     command: ["sh", "-c", "echo 'API placeholder ready at /backend'; tail -f /dev/null"]
 
 volumes:
-  postgres_data:
+  pgdata:
   redis_data:
