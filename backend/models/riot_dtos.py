@@ -22,12 +22,18 @@ class ParticipantDTO(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    puuid: str
     kills: int
     deaths: int
     assists: int
     totalDamageDealtToChampions: int
     goldEarned: int
     visionScore: int
+    minionsKilled: int = Field(
+        default=0,
+        validation_alias=AliasChoices("minionsKilled", "totalMinionsKilled"),
+    )
+    neutralMinionsKilled: int = 0
     championId: int
     teamId: int
     individualPosition: str

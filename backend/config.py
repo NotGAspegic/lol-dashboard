@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
 	# API options
 	api_v1_prefix: str = "/api/v1"
+	frontend_origin: str = "http://localhost:5173"
 
 	@field_validator("database_url")
 	@classmethod
@@ -79,3 +80,4 @@ if __name__ == "__main__":
 	print(f"celery_broker_url={settings.effective_celery_broker_url}")
 	print(f"celery_result_backend={settings.effective_celery_result_backend}")
 	print(f"api_v1_prefix={settings.api_v1_prefix}")
+	print(f"frontend_origin={settings.frontend_origin}")
