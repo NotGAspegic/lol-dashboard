@@ -9,7 +9,10 @@ class SummonerDTO(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     puuid: str
-    id: str = Field(description="Encrypted summoner ID (encryptedSummonerId).")
+    id: str | None = Field(
+        default=None,
+        description="Encrypted summoner ID (encryptedSummonerId). May be absent in some responses.",
+    )
     profileIconId: int
     summonerLevel: int
 
