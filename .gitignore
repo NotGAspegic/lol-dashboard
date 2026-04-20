@@ -10,3 +10,16 @@ node_modules/
 
 # DB Data
 pgdata/
+
+# Logs
+logs/
+
+# IDEs
+.vscode/
+.idea/
+# OS Files
+.DS_Store
+Thumbs.db
+
+#Blueprints
+blueprints/
