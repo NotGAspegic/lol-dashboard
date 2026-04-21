@@ -21,6 +21,7 @@ class Summoner(Base):
     id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     profileIconId: Mapped[int] = mapped_column(Integer, nullable=False)
     summonerLevel: Mapped[int] = mapped_column(Integer, nullable=False)
+    match_history_cursor: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class Match(Base):

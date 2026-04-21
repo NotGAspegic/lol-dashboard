@@ -17,6 +17,9 @@ logs/
 # IDEs
 .vscode/
 .idea/
+*.swp
+*.swo
+*.save
 # OS Files
 .DS_Store
 Thumbs.db

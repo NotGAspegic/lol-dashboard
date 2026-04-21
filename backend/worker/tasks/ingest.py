@@ -5,7 +5,7 @@ from typing import Any
 import httpx
 from celery import shared_task
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -15,7 +15,7 @@ from db.ops_sync import (
     upsert_participants_sync,
     upsert_timeline_frames_sync,
 )
-from models.db import Match
+from models.db import Match, Summoner
 from models.riot_dtos import MatchDTO, ParticipantFrameDTO, TimelineFrameDTO
 from riot.client import RiotClient
 from riot.client import RiotMatchNotFoundError
@@ -284,4 +284,241 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
         "region": normalized_region,
         "inserted": True,
         "skipped": False,
+    }
+
+
+@shared_task(
+    bind=True,
+    name="worker.tasks.ingest.ingest_summoner_matches",
+    max_retries=MAX_RETRIES,
+    default_retry_delay=RATE_LIMIT_RETRY_DELAY_SECONDS,
+)
+def ingest_summoner_matches(
+    self,
+    puuid: str,
+    region: str,
+    count: int = 20,
+    queue: int = 420,
+    since_match_id: str | None = None,
+) -> dict[str, Any]:
+    """Orchestrate match ingestion by dispatching one task per new match ID.
+
+    This task intentionally does not fetch match payloads. It only:
+    1) fetches recent match IDs,
+    2) filters out IDs already in DB,
+    3) dispatches ingest_match subtasks for the remaining IDs.
+    """
+
+    normalized_puuid = puuid.strip()
+    normalized_region = region.strip().lower()
+
+    if not normalized_puuid:
+        raise ValueError("puuid cannot be empty.")
+    if not normalized_region:
+        raise ValueError("region cannot be empty.")
+    if count < 1 or count > 100:
+        raise ValueError("count must be between 1 and 100.")
+    if queue < 0:
+        raise ValueError("queue must be >= 0.")
+
+    normalized_since_match_id: str | None = None
+    if since_match_id is not None:
+        normalized_since_match_id = since_match_id.strip()
+        if not normalized_since_match_id:
+            raise ValueError("since_match_id cannot be empty when provided.")
+
+    async def _fetch_match_ids() -> list[str]:
+        async with RiotClient(
+            settings.riot_api_key.get_secret_value(),
+            redis_url=settings.redis_url,
+        ) as riot_client:
+            return await riot_client.get_match_ids(
+                puuid=normalized_puuid,
+                region=normalized_region,
+                count=count,
+                queue=queue,
+            )
+
+    try:
+        fetched_match_ids = asyncio.run(_fetch_match_ids())
+    except RiotRateLimitedError as exc:
+        countdown = RATE_LIMIT_RETRY_DELAY_SECONDS
+        logger.warning(
+            "Rate limited during ingest_summoner_matches; retrying "
+            "(puuid=%s, region=%s, retry=%s, countdown=%s)",
+            normalized_puuid,
+            normalized_region,
+            self.request.retries + 1,
+            countdown,
+        )
+        raise self.retry(exc=exc, countdown=countdown)
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 404:
+            logger.warning(
+                "Riot returned HTTP 404 for match ID list; skipping without retry "
+                "(puuid=%s, region=%s)",
+                normalized_puuid,
+                normalized_region,
+            )
+            return {
+                "puuid": normalized_puuid,
+                "region": normalized_region,
+                "requested_count": count,
+                "queue": queue,
+                "fetched_match_count": 0,
+                "new_match_count": 0,
+                "dispatched_count": 0,
+                "not_found": True,
+                "dispatched_tasks": [],
+            }
+        if status_code == 429:
+            countdown = RATE_LIMIT_RETRY_DELAY_SECONDS
+            logger.warning(
+                "HTTP 429 during ingest_summoner_matches; retrying "
+                "(puuid=%s, region=%s, retry=%s, countdown=%s)",
+                normalized_puuid,
+                normalized_region,
+                self.request.retries + 1,
+                countdown,
+            )
+            raise self.retry(exc=exc, countdown=countdown)
+        if status_code is not None and 500 <= status_code < 600:
+            countdown = SERVER_ERROR_RETRY_DELAY_SECONDS
+            logger.warning(
+                "Riot server error during ingest_summoner_matches; retrying "
+                "(puuid=%s, region=%s, status=%s, retry=%s/%s, countdown=%s)",
+                normalized_puuid,
+                normalized_region,
+                status_code,
+                self.request.retries + 1,
+                MAX_RETRIES,
+                countdown,
+            )
+            raise self.retry(exc=exc, countdown=countdown, max_retries=MAX_RETRIES)
+        raise
+
+    cursor_found = False
+    candidate_match_ids = fetched_match_ids
+    if normalized_since_match_id is not None:
+        try:
+            cursor_index = fetched_match_ids.index(normalized_since_match_id)
+            candidate_match_ids = fetched_match_ids[:cursor_index]
+            cursor_found = True
+        except ValueError:
+            # Cursor not present in the fetched window; treat all fetched IDs as candidates.
+            candidate_match_ids = fetched_match_ids
+            logger.info(
+                "since_match_id not found in fetched window; using full fetched set "
+                "(puuid=%s, region=%s, since_match_id=%s, fetched_count=%s)",
+                normalized_puuid,
+                normalized_region,
+                normalized_since_match_id,
+                len(fetched_match_ids),
+            )
+
+    ordered_game_ids: list[int] = []
+    game_id_to_match_id: dict[int, str] = {}
+
+    for candidate_match_id in candidate_match_ids:
+        try:
+            candidate_game_id = _extract_game_id(candidate_match_id)
+        except ValueError:
+            logger.warning(
+                "Skipping malformed match ID while orchestrating ingestion "
+                "(puuid=%s, region=%s, match_id=%s)",
+                normalized_puuid,
+                normalized_region,
+                candidate_match_id,
+            )
+            continue
+
+        if candidate_game_id not in game_id_to_match_id:
+            ordered_game_ids.append(candidate_game_id)
+            game_id_to_match_id[candidate_game_id] = candidate_match_id
+
+    existing_game_ids: set[int] = set()
+    if ordered_game_ids:
+        with SyncSessionFactory() as session:
+            existing_game_ids = set(
+                session.scalars(
+                    select(Match.gameId).where(Match.gameId.in_(ordered_game_ids))
+                ).all()
+            )
+
+    new_match_ids = [
+        game_id_to_match_id[game_id]
+        for game_id in ordered_game_ids
+        if game_id not in existing_game_ids
+    ]
+
+    dispatched_tasks: list[dict[str, str]] = []
+    for i, new_match_id in enumerate(new_match_ids):
+        countdown = i * 3
+        async_result = ingest_match.apply_async(
+            args=[new_match_id, normalized_region],
+            countdown=countdown,
+            queue="ingestion",
+        )
+        dispatched_tasks.append(
+            {
+                "match_id": new_match_id,
+                "task_id": async_result.id,
+                "countdown": str(countdown),
+            }
+        )
+
+    newest_match_id_in_batch = new_match_ids[0] if new_match_ids else None
+    cursor_updated = False
+    if newest_match_id_in_batch is not None:
+        with SyncSessionFactory() as session:
+            update_result = session.execute(
+                update(Summoner)
+                .where(Summoner.puuid == normalized_puuid)
+                .values(match_history_cursor=newest_match_id_in_batch)
+            )
+            session.commit()
+            updated_rows = update_result.rowcount if update_result.rowcount is not None else 0
+            cursor_updated = updated_rows > 0
+
+        if not cursor_updated:
+            logger.warning(
+                "No summoner row updated for cursor save "
+                "(puuid=%s, region=%s, cursor=%s)",
+                normalized_puuid,
+                normalized_region,
+                newest_match_id_in_batch,
+            )
+
+    logger.info(
+        "Dispatched ingest_match subtasks (puuid=%s, region=%s, requested_count=%s, "
+        "fetched=%s, candidate=%s, existing=%s, dispatched=%s, since_match_id=%s, "
+        "cursor_found=%s, newest_match_id_in_batch=%s, cursor_updated=%s)",
+        normalized_puuid,
+        normalized_region,
+        count,
+        len(fetched_match_ids),
+        len(candidate_match_ids),
+        len(existing_game_ids),
+        len(dispatched_tasks),
+        normalized_since_match_id,
+        cursor_found,
+        newest_match_id_in_batch,
+        cursor_updated,
+    )
+
+    return {
+        "puuid": normalized_puuid,
+        "region": normalized_region,
+        "requested_count": count,
+        "queue": queue,
+        "since_match_id": normalized_since_match_id,
+        "cursor_found": cursor_found,
+        "fetched_match_count": len(fetched_match_ids),
+        "candidate_match_count": len(candidate_match_ids),
+        "new_match_count": len(new_match_ids),
+        "dispatched_count": len(dispatched_tasks),
+        "newest_match_id_in_batch": newest_match_id_in_batch,
+        "cursor_updated": cursor_updated,
+        "dispatched_tasks": dispatched_tasks,
     }

@@ -235,6 +235,25 @@ class RiotClient:
 
         return SummonerDTO.model_validate(summoner_response.json())
 
+    async def get_summoner_by_puuid(self, puuid: str, region: str) -> SummonerDTO:
+        """Fetch summoner-v4 profile data for a known puuid on a platform route."""
+        normalized_puuid = puuid.strip()
+        if not normalized_puuid:
+            raise ValueError("puuid cannot be empty")
+
+        platform = region.strip().lower()
+        if not platform:
+            raise ValueError("region cannot be empty")
+
+        summoner_url = (
+            f"{platform_base_url(platform)}"
+            f"/lol/summoner/v4/summoners/by-puuid/{quote(normalized_puuid, safe='')}"
+        )
+        response = await self._get_with_rate_limit(url=summoner_url, region=platform)
+        response.raise_for_status()
+
+        return SummonerDTO.model_validate(response.json())
+
     async def get_match_ids(
         self,
         puuid: str,
