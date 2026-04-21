@@ -80,6 +80,26 @@ services:
         "pip install --no-cache-dir -r requirements.txt && celery -A worker.celery_app worker -Q ingestion,refresh --loglevel=info --concurrency=2",
       ]
 
+  beat:
+    image: python:3.11-slim
+    container_name: lol_beat
+    restart: unless-stopped
+    working_dir: /backend
+    volumes:
+      - ../backend:/backend
+    env_file:
+      - ../backend/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://loluser:lolpassword@postgres:5432/loldb}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on: [redis, postgres]
+    command:
+      [
+        "sh",
+        "-c",
+        "pip install --no-cache-dir -r requirements.txt && celery -A worker.celery_app beat --loglevel=info",
+      ]
+
 volumes:
   pgdata:
   redis_data:

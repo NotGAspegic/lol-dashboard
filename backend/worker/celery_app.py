@@ -17,3 +17,11 @@ celery_app.conf.task_routes = {
 	"worker.tasks.refresh.*": {"queue": "refresh"},
 	"worker.tasks.ping": {"queue": "refresh"},
 }
+celery_app.conf.timezone = "UTC"
+celery_app.conf.beat_schedule = {
+	"refresh-queue-heartbeat": {
+		"task": "worker.tasks.ping",
+		"schedule": 300.0,
+		"options": {"queue": "refresh"},
+	},
+}
