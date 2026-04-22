@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -22,6 +22,12 @@ class Summoner(Base):
     profileIconId: Mapped[int] = mapped_column(Integer, nullable=False)
     summonerLevel: Mapped[int] = mapped_column(Integer, nullable=False)
     match_history_cursor: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    region: Mapped[str] = mapped_column(String(32), nullable=False)
+    last_updated: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True),
+    default=func.now(),
+    onupdate=func.now(),
+    )
 
 
 class Match(Base):

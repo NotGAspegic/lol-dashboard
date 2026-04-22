@@ -10,3 +10,4 @@ alembic
 redis
 celery[redis]
 python-dotenv
+requests

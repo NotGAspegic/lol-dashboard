@@ -14,6 +14,8 @@ from models.riot_dtos import SummonerDTO
 from riot.client import RiotClient
 from worker.tasks.ingest import ingest_summoner_matches
 
+from datetime import datetime, timedelta, timezone
+
 
 logger = logging.getLogger(__name__)
 
@@ -304,3 +306,34 @@ def onboard_summoner(
             "summonerLevel": summoner_dto.summonerLevel,
         },
     }
+
+
+@shared_task(
+    name="worker.tasks.refresh.refresh_all_tracked_summoners",
+)
+def refresh_all_tracked_summoners() -> dict[str, Any]:
+    """Periodic task: fan out a refresh_summoner job for every tracked summoner."""
+    six_hours_ago = datetime.now(timezone.utc) - timedelta(hours=6)
+
+    with SyncSessionFactory() as db:
+        rows = db.execute(
+            select(Summoner.puuid, Summoner.region).where(
+                Summoner.last_updated < six_hours_ago
+            )
+        ).all()
+
+    if not rows:
+        logger.info("refresh_all_tracked_summoners: no summoners to refresh")
+        return {"dispatched": 0}
+
+    for i, (puuid, region) in enumerate(rows):
+        refresh_summoner.apply_async(
+            args=[puuid, region],
+            countdown=i * 10,
+            queue="refresh",
+        )
+
+    logger.info(
+        "refresh_all_tracked_summoners dispatched %s refresh jobs", len(rows)
+    )
+    return {"dispatched": len(rows)}

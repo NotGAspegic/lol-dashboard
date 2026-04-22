@@ -2,6 +2,8 @@ from celery import Celery
 
 from config import settings
 
+from celery.schedules import crontab
+
 celery_app = Celery("lol_dashboard")
 celery_app.set_default()
 celery_app.conf.broker_url = settings.redis_url
@@ -19,9 +21,14 @@ celery_app.conf.task_routes = {
 }
 celery_app.conf.timezone = "UTC"
 celery_app.conf.beat_schedule = {
-	"refresh-queue-heartbeat": {
-		"task": "worker.tasks.ping",
-		"schedule": 300.0,
-		"options": {"queue": "refresh"},
-	},
+    "refresh-queue-heartbeat": {
+        "task": "worker.tasks.ping",
+        "schedule": 300.0,
+        "options": {"queue": "refresh"},
+    },
+    "refresh-all-summoners": {
+        "task": "worker.tasks.refresh.refresh_all_tracked_summoners",
+        "schedule": crontab(hour="*/6", minute="0"),
+        "options": {"queue": "refresh"},
+    },
 }
