@@ -11,14 +11,20 @@ from sqlalchemy.orm import Session
 from models.db import Match, MatchParticipant, MatchTimelineFrame, Summoner
 from models.riot_dtos import MatchDTO, ParticipantDTO, SummonerDTO
 
+import time
 
-def upsert_summoner_sync(session: Session, dto: SummonerDTO) -> None:
+import logging
+logger = logging.getLogger(__name__)
+
+
+def upsert_summoner_sync(session: Session, dto: SummonerDTO, region: str) -> None:
     """Insert or update a summoner row keyed by puuid."""
     payload = {
         "puuid": dto.puuid,
         "id": dto.id,
         "profileIconId": dto.profileIconId,
         "summonerLevel": dto.summonerLevel,
+        "region": region,
     }
 
     stmt = insert(Summoner).values(**payload)
@@ -28,6 +34,7 @@ def upsert_summoner_sync(session: Session, dto: SummonerDTO) -> None:
             "id": stmt.excluded.id,
             "profileIconId": stmt.excluded.profileIconId,
             "summonerLevel": stmt.excluded.summonerLevel,
+            "region": stmt.excluded.region,
         },
     )
 
@@ -132,7 +139,14 @@ def upsert_participants_sync(
 
     session.execute(delete(MatchParticipant).where(MatchParticipant.gameId == match_id))
     if rows:
+        t0 = time.perf_counter()
         session.execute(insert(MatchParticipant), rows)
+        logger.debug(
+            "participants bulk insert: %.0fms (match_id=%s, rows=%s)",
+            (time.perf_counter() - t0) * 1000,
+            match_id,
+            len(rows),
+        )
 
 
 def _value(source: object, key: str, default: Any = None) -> Any:
@@ -209,7 +223,14 @@ def upsert_timeline_frames_sync(session: Session, match_id: int, timeline_dto: o
             )
 
     session.execute(
-        delete(MatchTimelineFrame).where(MatchTimelineFrame.match_id == match_id)
-    )
+            delete(MatchTimelineFrame).where(MatchTimelineFrame.match_id == match_id)
+        )
     if rows:
-        session.execute(insert(MatchTimelineFrame), rows)
+            t0 = time.perf_counter()
+            session.execute(insert(MatchTimelineFrame), rows)
+            logger.debug(
+                "timeline bulk insert: %.0fms (match_id=%s, rows=%s)",
+                (time.perf_counter() - t0) * 1000,
+                match_id,
+                len(rows),
+        )

@@ -12,15 +12,14 @@ from models.db import Match, MatchParticipant, MatchTimelineFrame, Summoner
 from models.riot_dtos import MatchDTO, ParticipantDTO, SummonerDTO
 
 
-async def upsert_summoner(session: AsyncSession, dto: SummonerDTO) -> None:
-    """Insert or update a summoner row keyed by puuid."""
+async def upsert_summoner(session, dto: SummonerDTO, region: str) -> None:
     payload = {
         "puuid": dto.puuid,
         "id": dto.id,
         "profileIconId": dto.profileIconId,
         "summonerLevel": dto.summonerLevel,
+        "region": region,
     }
-
     stmt = insert(Summoner).values(**payload)
     upsert_stmt = stmt.on_conflict_do_update(
         index_elements=[Summoner.puuid],
@@ -28,9 +27,9 @@ async def upsert_summoner(session: AsyncSession, dto: SummonerDTO) -> None:
             "id": stmt.excluded.id,
             "profileIconId": stmt.excluded.profileIconId,
             "summonerLevel": stmt.excluded.summonerLevel,
+            "region": stmt.excluded.region,
         },
     )
-
     await session.execute(upsert_stmt)
 
 

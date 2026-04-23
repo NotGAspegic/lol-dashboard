@@ -31,4 +31,9 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour="*/6", minute="0"),
         "options": {"queue": "refresh"},
     },
+    "retry-failed-ingestions": {
+    "task": "worker.tasks.ingest.retry_failed_ingestions",
+    "schedule": crontab(hour="3", minute="0"),  # 3am UTC daily
+    "options": {"queue": "ingestion"},
+    },
 }

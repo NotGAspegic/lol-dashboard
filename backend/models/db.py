@@ -114,3 +114,22 @@ class MatchTimelineFrame(Base):
     position_y: Mapped[int] = mapped_column(Integer, nullable=False)
 
     match: Mapped[Match] = relationship(back_populates="timeline_frames")
+
+
+
+class FailedIngestion(Base):
+    """Dead letter record for match ingestion tasks that exhausted all retries."""
+
+    __tablename__ = "failed_ingestions"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    region: Mapped[str] = mapped_column(String(32), nullable=False)
+    error_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    error_message: Mapped[str] = mapped_column(String(1024), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+    failed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )

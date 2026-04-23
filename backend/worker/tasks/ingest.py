@@ -8,6 +8,10 @@ from redis.asyncio import Redis
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from celery.exceptions import MaxRetriesExceededError
+from models.db import FailedIngestion
+from datetime import datetime
+
 from config import settings
 from database_sync import SyncSessionFactory
 from db.ops_sync import (
@@ -131,11 +135,41 @@ def _validate_timeline_payload(timeline_payload: dict[str, Any]) -> dict[str, An
     return {"frames": normalized_frames}
 
 
+def _ingest_match_on_failure(self, exc, task_id, args, kwargs, einfo):
+    """Write a dead letter record when ingest_match exhausts all retries."""
+    if not isinstance(exc, MaxRetriesExceededError):
+        return  # only record final failures, not intermediate retries
+
+    match_id = args[0] if args else "unknown"
+    region   = args[1] if len(args) > 1 else "unknown"
+
+    try:
+        with SyncSessionFactory() as session:
+            session.add(FailedIngestion(
+                match_id=match_id,
+                region=region,
+                error_type=type(exc.__cause__).__name__ if exc.__cause__ else type(exc).__name__,
+                error_message=str(exc.__cause__ or exc)[:1024],
+                attempts=MAX_RETRIES + 1,
+            ))
+            session.commit()
+        logger.error(
+            "ingest_match dead-lettered after %s attempts (match_id=%s, region=%s)",
+            MAX_RETRIES + 1, match_id, region,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to write dead letter record (match_id=%s, region=%s)",
+            match_id, region,
+        )
+
+
 @shared_task(
     bind=True,
     name="worker.tasks.ingest.ingest_match",
     max_retries=MAX_RETRIES,
     default_retry_delay=RATE_LIMIT_RETRY_DELAY_SECONDS,
+    on_failure=_ingest_match_on_failure,
 )
 def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
     """Fetch, validate, and persist a single match as the core ingestion unit."""
@@ -209,7 +243,7 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
             # Step 6: commit.
             session.commit()
     except RiotRateLimitedError as exc:
-        countdown = RATE_LIMIT_RETRY_DELAY_SECONDS
+        countdown = 2 ** self.request.retries * 30
         logger.warning(
             "Rate limited during task ingest_match; retrying "
             "(match_id=%s, region=%s, retry=%s, countdown=%s)",
@@ -250,7 +284,9 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
                 "not_found": True,
             }
         if status_code == 429:
-            countdown = RATE_LIMIT_RETRY_DELAY_SECONDS
+            retry_after = exc.response.headers.get("Retry-After")
+            countdown = int(retry_after) if retry_after and retry_after.isdigit() \
+                        else 2 ** self.request.retries * 30
             logger.warning(
                 "HTTP 429 during task ingest_match; retrying "
                 "(match_id=%s, region=%s, retry=%s, countdown=%s)",
@@ -261,7 +297,7 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
             )
             raise self.retry(exc=exc, countdown=countdown)
         if status_code is not None and 500 <= status_code < 600:
-            countdown = SERVER_ERROR_RETRY_DELAY_SECONDS
+            countdown = 2 ** self.request.retries * 30
             logger.warning(
                 "Riot server error during task ingest_match; retrying "
                 "(match_id=%s, region=%s, status=%s, retry=%s/%s, countdown=%s)",
@@ -522,3 +558,55 @@ def ingest_summoner_matches(
         "cursor_updated": cursor_updated,
         "dispatched_tasks": dispatched_tasks,
     }
+
+
+
+
+
+
+
+
+@shared_task(
+    name="worker.tasks.ingest.retry_failed_ingestions",
+)
+def retry_failed_ingestions() -> dict[str, Any]:
+    """Periodic task: re-dispatch failed ingestions that are less than 7 days old."""
+    from datetime import timezone, timedelta
+    from sqlalchemy import delete
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+
+    with SyncSessionFactory() as session:
+        rows = session.execute(
+            select(FailedIngestion).where(FailedIngestion.failed_at >= cutoff)
+        ).scalars().all()
+
+        if not rows:
+            logger.info("retry_failed_ingestions: nothing to retry")
+            return {"retried": 0, "expired_deleted": 0}
+
+        for i, record in enumerate(rows):
+            ingest_match.apply_async(
+                args=[record.match_id, record.region],
+                countdown=i * 5,
+                queue="ingestion",
+            )
+
+        # delete retried rows — if they fail again they'll be re-written by on_failure
+        retried_ids = [r.id for r in rows]
+        session.execute(
+            delete(FailedIngestion).where(FailedIngestion.id.in_(retried_ids))
+        )
+
+        # also clean up records older than 7 days
+        expired = session.execute(
+            delete(FailedIngestion).where(FailedIngestion.failed_at < cutoff)
+        ).rowcount
+
+        session.commit()
+
+    logger.info(
+        "retry_failed_ingestions: retried=%s expired_deleted=%s",
+        len(rows), expired,
+    )
+    return {"retried": len(rows), "expired_deleted": expired}

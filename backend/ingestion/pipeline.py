@@ -254,7 +254,7 @@ async def ingest_summoner(
         raise
 
     async with AsyncSessionFactory() as session:
-        await upsert_summoner(session, summoner_dto)
+        await upsert_summoner(session, summoner_dto, region=region)
         await session.commit()
 
     logger.info(

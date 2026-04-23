@@ -128,7 +128,7 @@ def refresh_summoner(
         )
 
     with SyncSessionFactory() as session:
-        upsert_summoner_sync(session, summoner_dto)
+        upsert_summoner_sync(session, summoner_dto , region=normalized_region)
         session.commit()
 
     fanout_async = ingest_summoner_matches.apply_async(
@@ -269,7 +269,7 @@ def onboard_summoner(
                 "dispatched": False,
             }
 
-        upsert_summoner_sync(session, summoner_dto)
+        upsert_summoner_sync(session, summoner_dto , region=normalized_region)
         session.commit()
 
     fanout_async = ingest_summoner_matches.apply_async(

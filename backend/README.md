@@ -100,7 +100,7 @@ python ingest.py --summoner "Name#TAG" --region na1 --count 50 --queue 420
 ### Examples
 
 ```bash
-python ingest.py --summoner "Belmont#CHALL" --region na1 --count 20
+python ingest.py --summoner "Belmont#CHALL" --region euw1 --count 20
 python ingest.py --summoner "G2 Caps#1323" --region euw1 --count 20
 ```
 
@@ -117,3 +117,14 @@ PGPASSWORD=lolpassword psql -h localhost -U loluser -d loldb -c "SELECT COUNT(*)
 - `401 Unknown apikey`: your Riot key is expired or invalid. Update `backend/.env`.
 - `POSTGRES_DB/USER/PASSWORD variable is not set`: add `infra/.env` as shown above.
 - `404 Not Found` for a summoner on one region: try the correct platform region (for example, `euw1` vs `na1`).
+
+
+
+## Commands
+```bash
+cd /home/glyph/projects/lol-dashboard/infra
+docker compose down
+
+
+
+```
