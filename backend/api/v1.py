@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal
 
+from fastapi.responses import JSONResponse
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
@@ -146,6 +147,50 @@ def _serialize_task_result(value: Any) -> Any:
         return str(value)
 
 
+REFRESH_RATE_LIMIT_SECONDS = 300  # 5 minutes
+
+@router.post(
+    "/summoners/{puuid}/refresh",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def refresh_summoner_endpoint(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Manually trigger an incremental match refresh for a summoner."""
+    summoner = await session.scalar(select(Summoner).where(Summoner.puuid == puuid))
+    if summoner is None:
+        raise HTTPException(status_code=404, detail="summoner not found")
+
+    # Redis rate limit — max 1 refresh per summoner per 5 minutes
+    redis_client = getattr(request.app.state, "redis", None)
+    if redis_client is not None:
+        rate_key = f"refresh_limit:{puuid}"
+        already_refreshing = await redis_client.get(rate_key)
+        if already_refreshing:
+            raise HTTPException(
+                status_code=429,
+                detail="refresh already triggered recently, please wait 5 minutes",
+            )
+        await redis_client.setex(rate_key, REFRESH_RATE_LIMIT_SECONDS, "1")
+
+    async_result = refresh_summoner.delay(puuid, summoner.region)
+
+    logger.info(
+        "Manual refresh triggered (puuid=%s, region=%s, task_id=%s)",
+        puuid, summoner.region, async_result.id,
+    )
+
+    return JSONResponse(
+        status_code=202,
+        content={
+            "status": "accepted",
+            "task_id": async_result.id,
+            "puuid": puuid,
+        },
+    )
+
 @router.post(
     "/summoners/search",
     response_model=SummonerSearchResponse,
@@ -154,7 +199,7 @@ def _serialize_task_result(value: Any) -> Any:
 async def search_summoner(
     payload: SummonerSearchRequest,
     session: AsyncSession = Depends(get_db_session),
-) -> SummonerSearchResponse:
+) -> JSONResponse:
     """Queue onboarding or refresh task and return task metadata immediately."""
     normalized_game_name = payload.game_name.strip()
     normalized_tag_line = payload.tag_line.strip()
@@ -190,66 +235,125 @@ async def search_summoner(
         raise HTTPException(status_code=502, detail="failed to resolve summoner") from exc
 
     existing_puuid = await session.scalar(
-        select(Summoner.puuid).where(Summoner.puuid == summoner_dto.puuid)
+            select(Summoner.puuid).where(Summoner.puuid == summoner_dto.puuid)
+        )
+
+    if existing_puuid is not None:
+        # already tracked — return stored data immediately as 200
+        summoner = await session.scalar(
+            select(Summoner).where(Summoner.puuid == summoner_dto.puuid)
+        )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "ready",
+                "puuid": summoner.puuid,
+                "profileIconId": summoner.profileIconId,
+                "summonerLevel": summoner.summonerLevel,
+                "region": summoner.region,
+            },
+        )
+
+    # new summoner — kick off onboarding
+    async_result = onboard_summoner.delay(
+        normalized_game_name,
+        normalized_tag_line,
+        normalized_region,
+    )
+    logger.info(
+        "Queued onboard_summoner (game_name=%s, tag_line=%s, region=%s, puuid=%s, task_id=%s)",
+        normalized_game_name, normalized_tag_line, normalized_region,
+        summoner_dto.puuid, async_result.id,
+    )
+    return JSONResponse(
+        status_code=202,
+        content={
+            "status": "onboarding",
+            "task_id": async_result.id,
+            "task_type": "onboard_summoner",
+            "puuid": summoner_dto.puuid,
+            "game_name": normalized_game_name,
+            "tag_line": normalized_tag_line,
+            "region": normalized_region,
+        },
     )
 
-    if existing_puuid is None:
-        async_result = onboard_summoner.delay(
-            normalized_game_name,
-            normalized_tag_line,
-            normalized_region,
-        )
-        task_type = "onboard_summoner"
-        logger.info(
-            "Queued onboard_summoner for first-time lookup "
-            "(game_name=%s, tag_line=%s, region=%s, puuid=%s, task_id=%s)",
-            normalized_game_name,
-            normalized_tag_line,
-            normalized_region,
-            summoner_dto.puuid,
-            async_result.id,
-        )
-    else:
-        async_result = refresh_summoner.delay(
-            summoner_dto.puuid,
-            normalized_region,
-        )
-        task_type = "refresh_summoner"
-        logger.info(
-            "Queued refresh_summoner for existing lookup "
-            "(game_name=%s, tag_line=%s, region=%s, puuid=%s, task_id=%s)",
-            normalized_game_name,
-            normalized_tag_line,
-            normalized_region,
-            summoner_dto.puuid,
-            async_result.id,
-        )
+STATUS_MESSAGES = {
+    "PENDING":  "Fetching summoner data...",
+    "STARTED":  "Ingesting match history...",
+    "SUCCESS":  "Ready",
+    "FAILURE":  "Error — please try again",
+}
 
-    return SummonerSearchResponse(
-        status="accepted",
-        task_id=async_result.id,
-        task_type=task_type,
-        puuid=summoner_dto.puuid,
-        game_name=normalized_game_name,
-        tag_line=normalized_tag_line,
-        region=normalized_region,
-    )
-
-
-@router.get(
-    "/tasks/{task_id}",
-    response_model=TaskStatusResponse,
-)
-async def get_task_status(task_id: str) -> TaskStatusResponse:
-    """Return Celery task polling status for frontend loading state updates."""
+@router.get("/tasks/{task_id}/status")
+async def get_task_status(task_id: str) -> JSONResponse:
     async_result = AsyncResult(task_id, app=celery_app)
-    normalized_status = _normalize_task_status(async_result.status)
+    normalized = _normalize_task_status(async_result.status)
 
-    result: Any | None = None
-    if normalized_status in {"SUCCESS", "FAILURE"}:
+    result = None
+    if normalized in {"SUCCESS", "FAILURE"}:
         result = _serialize_task_result(async_result.result)
 
-    return TaskStatusResponse(
-        status=normalized_status,
-        result=result,
+    return JSONResponse(content={
+        "status": normalized,
+        "message": STATUS_MESSAGES[normalized],
+        "result": result,
+    })
+
+
+@router.get("/summoners/{puuid}/ingestion-status")
+async def get_ingestion_status(
+    puuid: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Return match count, last ingested timestamp, and pending task count."""
+    from sqlalchemy import func, select as sa_select
+    from models.db import Match, MatchParticipant
+
+    summoner = await session.scalar(select(Summoner).where(Summoner.puuid == puuid))
+    if summoner is None:
+        raise HTTPException(status_code=404, detail="summoner not found")
+
+    # total matches ingested for this summoner
+    total_matches = await session.scalar(
+        sa_select(func.count()).select_from(MatchParticipant)
+        .where(MatchParticipant.puuid == puuid)
     )
+
+    # most recent game start timestamp
+    last_game_start = await session.scalar(
+        sa_select(func.max(Match.gameStartTimestamp))
+        .join(MatchParticipant, Match.gameId == MatchParticipant.gameId)
+        .where(MatchParticipant.puuid == puuid)
+    )
+
+    # pending tasks — inspect active + reserved queues
+    pending_count = 0
+    try:
+        inspect = celery_app.control.inspect(timeout=1.0)
+        active   = inspect.active()   or {}
+        reserved = inspect.reserved() or {}
+        all_tasks = [
+            t for worker_tasks in (*active.values(), *reserved.values())
+            for t in worker_tasks
+        ]
+        pending_count = sum(
+            1 for t in all_tasks
+            if puuid in str(t.get("args", ""))
+        )
+    except Exception:
+        pass  # inspect can fail if workers are busy — just return 0
+
+    last_ingested = None
+    if last_game_start:
+        from datetime import datetime, timezone
+        last_ingested = datetime.fromtimestamp(
+            last_game_start / 1000, tz=timezone.utc
+        ).isoformat()
+
+    return JSONResponse(content={
+        "puuid": puuid,
+        "total_matches": total_matches or 0,
+        "last_ingested": last_ingested,
+        "pending_tasks": pending_count,
+    })

@@ -31,6 +31,29 @@ services:
       timeout: 5s
       retries: 10
 
+  flower:
+    image: mher/flower
+    container_name: lol_flower
+    restart: unless-stopped
+    working_dir: /backend
+    volumes:
+      - ../backend:/backend
+    env_file:
+      - ../backend/.env
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      - redis
+      - worker
+    ports:
+      - "5555:5555"
+    command:
+      [
+        "sh",
+        "-c",
+        "pip install --no-cache-dir -r requirements.txt && celery -A worker.celery_app flower --port=5555 --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}",
+      ]
+
   adminer:
     image: adminer:latest
     container_name: lol_adminer

@@ -11,3 +11,4 @@ redis
 celery[redis]
 python-dotenv
 requests
+flower

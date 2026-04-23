@@ -102,6 +102,7 @@ python ingest.py --summoner "Name#TAG" --region na1 --count 50 --queue 420
 ```bash
 python ingest.py --summoner "Belmont#CHALL" --region euw1 --count 20
 python ingest.py --summoner "G2 Caps#1323" --region euw1 --count 20
+python ingest.py --summoner "BehindYou#Hers" --region euw1 --count 50
 ```
 
 ## 6) Quick Data Check
@@ -125,6 +126,6 @@ PGPASSWORD=lolpassword psql -h localhost -U loluser -d loldb -c "SELECT COUNT(*)
 cd /home/glyph/projects/lol-dashboard/infra
 docker compose down
 
-
+docker compose up -d
 
 ```
