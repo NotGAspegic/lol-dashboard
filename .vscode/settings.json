@@ -1,3 +1,5 @@
 {
-  "python.defaultInterpreterPath": "backend/.venv/bin/python"
+  "python.defaultInterpreterPath": "backend/.venv/bin/python",
+  "css.customData": [],
+  "css.lint.unknownAtRules": "ignore"
 }

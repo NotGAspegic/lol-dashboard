@@ -76,6 +76,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://loluser:lolpassword@postgres:5432/loldb}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      FRONTEND_ORIGIN: "http://localhost:3000"
     depends_on:
       postgres:
         condition: service_healthy

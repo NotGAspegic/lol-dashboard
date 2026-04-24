@@ -104,7 +104,7 @@ class RiotClient:
 
         self._owned_redis: Redis | None = None
         if rate_limiter is None:
-            limiter_redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            limiter_redis_url = redis_url or os.getenv("REDIS_URL", "redis://redis:6379/0")
             self._owned_redis = Redis.from_url(limiter_redis_url, decode_responses=True)
             self.rate_limiter = RiotDualBucketRateLimiter(self._owned_redis)
         else:

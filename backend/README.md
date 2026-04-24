@@ -30,8 +30,8 @@ Example:
 ```env
 RIOT_API_KEY=RGAPI-your-key-goes-here
 DATABASE_URL=postgresql+asyncpg://loluser:lolpassword@localhost:5432/loldb
-REDIS_URL=redis://localhost:6379/0
-FRONTEND_ORIGIN=http://localhost:5173
+REDIS_URL=redis://redis:6379/0
+FRONTEND_ORIGIN=http://localhost:3000
 ```
 
 ### Docker Compose env file

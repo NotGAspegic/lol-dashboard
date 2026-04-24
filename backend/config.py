@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
 	# Data stores
 	database_url: str
-	redis_url: str = "redis://localhost:6379/0"
+	redis_url: str = "redis://redis:6379/0"
 
 	# Celery defaults to Redis if explicit values are not provided
 	celery_broker_url: str | None = None
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
 	# API options
 	api_v1_prefix: str = "/api/v1"
-	frontend_origin: str = "http://localhost:5173"
+	frontend_origin: str = "http://localhost:3000"
 
 	@field_validator("database_url")
 	@classmethod
