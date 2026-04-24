@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Literal
 
 from fastapi.responses import JSONResponse
@@ -11,6 +12,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
+
+from utils.cache import cache_get, cache_set
 
 try:
     from ..config import settings
@@ -102,12 +105,37 @@ async def health(request: Request) -> dict[str, Any]:
 @router.get("/summoners/{puuid}", response_model=SummonerResponse)
 async def get_summoner(
     puuid: str,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
 ) -> SummonerResponse:
-    """Fetch and return a stored summoner row by puuid."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"summoner:{puuid}"
+
+    # try cache first
+    if redis:
+        t0 = time.perf_counter()
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            logger.debug("summoner served from cache in %.1fms", (time.perf_counter() - t0) * 1000)
+            return SummonerResponse(**cached)
+
+    # cache miss — hit DB
+    t0 = time.perf_counter()
     summoner = await session.scalar(select(Summoner).where(Summoner.puuid == puuid))
     if summoner is None:
         raise HTTPException(status_code=404, detail="summoner not found")
+    logger.debug("summoner loaded from DB in %.1fms", (time.perf_counter() - t0) * 1000)
+
+    # store in cache
+    if redis:
+        payload = {
+            "puuid": summoner.puuid,
+            "id": summoner.id,
+            "profileIconId": summoner.profileIconId,
+            "summonerLevel": summoner.summonerLevel,
+        }
+        await cache_set(redis, cache_key, payload, ttl=300)
+
     return summoner
 
 

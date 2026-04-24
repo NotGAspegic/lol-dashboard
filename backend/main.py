@@ -20,6 +20,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(levelname)s %(name)s - %(message)s",
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -151,6 +151,25 @@ def refresh_summoner(
         fanout_async.id,
     )
 
+    # invalidate cached summoner data so next read is fresh
+    try:
+        import redis as redis_sync
+        r = redis_sync.from_url(settings.redis_url, decode_responses=True)
+        r.delete(f"summoner:{normalized_puuid}")
+
+        cursor = 0
+        while True:
+            cursor, keys = r.scan(cursor, match=f"matches:{normalized_puuid}:*", count=100)
+            if keys:
+                r.delete(*keys)
+            if cursor == 0:
+                break
+
+        r.close()
+        logger.debug("Cache invalidated for puuid=%s", normalized_puuid)
+    except Exception:
+        logger.warning("Cache invalidation failed for puuid=%s", normalized_puuid, exc_info=True)
+
     return {
         "puuid": normalized_puuid,
         "region": normalized_region,
@@ -164,6 +183,8 @@ def refresh_summoner(
             "summonerLevel": summoner_dto.summonerLevel,
         },
     }
+    
+
 
 
 @shared_task(

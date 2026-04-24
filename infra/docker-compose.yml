@@ -85,7 +85,7 @@ services:
       [
         "sh",
         "-c",
-        "pip install --no-cache-dir -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload",
+        "pip install --no-cache-dir -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level debug",
       ]
     ports:
       - "8000:8000"

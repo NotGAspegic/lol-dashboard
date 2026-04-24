@@ -129,3 +129,41 @@ docker compose down
 docker compose up -d
 
 ```
+
+
+## Services
+
+| Service  | URL                   | Description              |
+|----------|-----------------------|--------------------------|
+| API      | http://localhost:8000 | FastAPI + Swagger docs   |
+| Flower   | http://localhost:5555 | Celery queue monitor     |
+| Adminer  | http://localhost:8080 | Database browser         |
+
+## Setup
+
+```bash
+# Start all services
+cd infra && docker compose up -d
+
+# Run migrations (required on first boot or after down -v)
+docker compose exec api alembic upgrade head
+docker compose exec postgres psql -U loluser -d loldb \
+  -c "SELECT create_hypertable('match_timeline_frames', 'frame_timestamp', if_not_exists => TRUE);"
+
+# Ingest a summoner manually
+cd backend && python ingest.py --summoner "Name#TAG" --region euw1 --count 50
+```
+
+## Beat Schedule
+
+| Task                            | Schedule     |
+|---------------------------------|--------------|
+| refresh_all_tracked_summoners   | Every 6h UTC |
+| retry_failed_ingestions         | 3am UTC daily|
+| heartbeat ping                  | Every 5 min  |
+
+## Manual Refresh
+
+```bash
+curl -X POST http://localhost:8000/api/v1/summoners/{puuid}/refresh
+```

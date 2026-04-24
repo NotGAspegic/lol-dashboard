@@ -103,7 +103,7 @@ class MatchTimelineFrame(Base):
     )
     participant_id: Mapped[int] = mapped_column(Integer, nullable=False)
     minute: Mapped[int] = mapped_column(Integer, nullable=False)
-    frame_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    frame_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False , primary_key=True)
     current_gold: Mapped[int] = mapped_column(Integer, nullable=False)
     total_gold: Mapped[int] = mapped_column(Integer, nullable=False)
     xp: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -112,8 +112,8 @@ class MatchTimelineFrame(Base):
     jungle_minions_killed: Mapped[int] = mapped_column(Integer, nullable=False)
     position_x: Mapped[int] = mapped_column(Integer, nullable=False)
     position_y: Mapped[int] = mapped_column(Integer, nullable=False)
-
     match: Mapped[Match] = relationship(back_populates="timeline_frames")
+    __mapper_args__ = {"primary_key": ["id", "frame_timestamp"]}
 
 
 
