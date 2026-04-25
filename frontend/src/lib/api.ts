@@ -18,6 +18,48 @@ export async function getSummoner(puuid: string): Promise<Summoner> {
   return res.data;
 }
 
+export interface KDATrendPoint {
+  game_index: number;
+  kda: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  win: boolean;
+  champion_id: number;
+  game_start: number;
+}
+
+export async function getKdaTrend(
+  puuid: string,
+  limit = 20
+): Promise<KDATrendPoint[]> {
+  const res = await api.get<KDATrendPoint[]>(
+    `/summoners/${puuid}/kda-trend`,
+    { params: { limit } }
+  );
+  return res.data;
+}
+
+export interface ScatterPoint {
+  kda: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  damage_share: number;
+  champion_id: number;
+  win: boolean;
+  game_duration: number;
+}
+
+export async function getPerformanceScatter(
+  puuid: string
+): Promise<ScatterPoint[]> {
+  const res = await api.get<ScatterPoint[]>(
+    `/summoners/${puuid}/performance-scatter`
+  );
+  return res.data;
+}
+
 export interface SummonerSearchResponse {
   status: "onboarding" | "ready";
   task_id?: string;

@@ -577,3 +577,111 @@ async def get_stats_overview(
         await cache_set(redis, cache_key, result, ttl=300)
 
     return JSONResponse(content=result)
+
+@router.get("/summoners/{puuid}/kda-trend")
+async def get_kda_trend(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    limit: int = 20,
+) -> JSONResponse:
+    """KDA trend for last N games in chronological order."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"kda_trend:{puuid}:{limit}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    rows = await session.execute(
+        select(
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+            MatchParticipant.win,
+            MatchParticipant.championId,
+            Match.gameStartTimestamp,
+        )
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(MatchParticipant.puuid == puuid)
+        .order_by(Match.gameStartTimestamp.desc())
+        .limit(limit)
+    )
+
+    # reverse to chronological order (oldest first)
+    games = list(rows)
+    games.reverse()
+
+    result = []
+    for i, row in enumerate(games):
+        kda = round(
+            (row.kills + row.assists) / max(row.deaths, 1), 2
+        )
+        result.append({
+            "game_index": i + 1,
+            "kda": kda,
+            "kills": row.kills,
+            "deaths": row.deaths,
+            "assists": row.assists,
+            "win": row.win,
+            "champion_id": row.championId,
+            "game_start": row.gameStartTimestamp,
+        })
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
+
+@router.get("/summoners/{puuid}/performance-scatter")
+async def get_performance_scatter(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """All games as scatter plot data points."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"perf_scatter:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    rows = await session.execute(
+        select(
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+            MatchParticipant.win,
+            MatchParticipant.championId,
+            MatchParticipant.challenges,
+            Match.gameDuration,
+        )
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(MatchParticipant.puuid == puuid)
+        .order_by(Match.gameStartTimestamp.desc())
+    )
+
+    result = []
+    for row in rows:
+        kda = round((row.kills + row.assists) / max(row.deaths, 1), 2)
+        challenges = row.challenges or {}
+        damage_share = round(float(challenges.get("damage_share", 0)), 4)
+        result.append({
+            "kda": kda,
+            "kills": row.kills,
+            "deaths": row.deaths,
+            "assists": row.assists,
+            "damage_share": damage_share,
+            "champion_id": row.championId,
+            "win": row.win,
+            "game_duration": row.gameDuration,
+        })
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)

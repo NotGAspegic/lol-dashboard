@@ -2,6 +2,12 @@ import { notFound } from "next/navigation";
 import { getSummoner, getStatsOverview } from "@/lib/api";
 import StatsOverviewCards from "@/components/profile/StatsOverviewCards";
 import RefreshButton from "@/components/profile/RefreshButton";
+import MatchList from "@/components/matches/MatchList";
+import ChampionStatsTable from "@/components/stats/ChampionStatsTable";
+import KDATrendChart from "@/components/charts/KDATrendChart";
+import WinRateChart from "@/components/charts/WinRateChart";
+import PerformanceScatter from "@/components/charts/PerformanceScatter";
+import Tabs from "@/components/profile/Tabs";
 
 interface ProfilePageProps {
   params: Promise<{ puuid: string }>;
@@ -68,12 +74,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       {/* Stats overview */}
       <StatsOverviewCards stats={statsData} />
 
-      {/* Placeholder for the rest of the page — Day 7+ */}
-      <div className="border border-primary/10 rounded-lg p-8 flex items-center justify-center">
-        <p className="text-dim text-sm font-mono">
-          // match history coming in Day 7
-        </p>
-      </div>
+      <Tabs puuid={puuid} />
     </div>
   );
 }
