@@ -9,7 +9,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import select,func, case
+from models.db import Summoner, Match, MatchParticipant
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
 
@@ -46,6 +47,7 @@ class SummonerResponse(BaseModel):
     id: str | None
     profileIconId: int
     summonerLevel: int
+    region: str | None = None
 
 
 class SummonerSearchRequest(BaseModel):
@@ -133,6 +135,7 @@ async def get_summoner(
             "id": summoner.id,
             "profileIconId": summoner.profileIconId,
             "summonerLevel": summoner.summonerLevel,
+            "region": summoner.region,
         }
         await cache_set(redis, cache_key, payload, ttl=300)
 
@@ -385,3 +388,192 @@ async def get_ingestion_status(
         "last_ingested": last_ingested,
         "pending_tasks": pending_count,
     })
+
+
+@router.get("/summoners/{puuid}/matches")
+async def get_matches(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    limit: int = 20,
+    offset: int = 0,
+) -> JSONResponse:
+    """Paginated match history for a summoner."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"matches:{puuid}:{limit}:{offset}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    rows = await session.execute(
+        select(
+            MatchParticipant.gameId,
+            MatchParticipant.championId,
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+            MatchParticipant.win,
+            MatchParticipant.individualPosition,
+            MatchParticipant.challenges,
+            Match.gameDuration,
+            Match.gameStartTimestamp,
+        )
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(MatchParticipant.puuid == puuid)
+        .order_by(Match.gameStartTimestamp.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    matches = []
+    for row in rows:
+        challenges = row.challenges or {}
+        matches.append({
+            "gameId": row.gameId,
+            "championId": row.championId,
+            "kills": row.kills,
+            "deaths": row.deaths,
+            "assists": row.assists,
+            "win": row.win,
+            "individualPosition": row.individualPosition,
+            "gameDuration": row.gameDuration,
+            "gameStartTimestamp": row.gameStartTimestamp,
+            "cs_per_min": round(challenges.get("cs_per_min", 0), 2),
+        })
+
+    if redis:
+        await cache_set(redis, cache_key, matches, ttl=300)
+
+    return JSONResponse(content=matches)
+
+
+@router.get("/summoners/{puuid}/champion-stats")
+async def get_champion_stats(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Aggregated per-champion stats for a summoner."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"champion_stats:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    rows = await session.execute(
+        select(
+            MatchParticipant.championId,
+            func.count().label("games"),
+            func.avg(MatchParticipant.kills).label("avg_kills"),
+            func.avg(MatchParticipant.deaths).label("avg_deaths"),
+            func.avg(MatchParticipant.assists).label("avg_assists"),
+            (
+                func.avg(
+                    case((MatchParticipant.win, 1.0), else_=0.0)
+                ) * 100
+            ).label("winrate"),
+        )
+        .where(MatchParticipant.puuid == puuid)
+        .group_by(MatchParticipant.championId)
+        .having(func.count() >= 3)
+        .order_by(func.count().desc())
+    )
+
+    stats = []
+    for row in rows:
+        avg_deaths = float(row.avg_deaths) if row.avg_deaths else 1
+        kda = round(
+            (float(row.avg_kills) + float(row.avg_assists)) / max(avg_deaths, 1), 2
+        )
+        stats.append({
+            "championId": row.championId,
+            "games": row.games,
+            "avg_kills": round(float(row.avg_kills), 1),
+            "avg_deaths": round(float(row.avg_deaths), 1),
+            "avg_assists": round(float(row.avg_assists), 1),
+            "kda": kda,
+            "winrate": round(float(row.winrate), 1),
+        })
+
+    if redis:
+        await cache_set(redis, cache_key, stats, ttl=300)
+
+    return JSONResponse(content=stats)
+
+
+@router.get("/summoners/{puuid}/stats-overview")
+async def get_stats_overview(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Overall performance summary for a summoner."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"stats_overview:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    # overall aggregates
+    agg = await session.execute(
+        select(
+            func.count().label("total_games"),
+            (func.avg(case((MatchParticipant.win, 1.0), else_=0.0)) * 100).label("winrate"),
+            func.avg(MatchParticipant.kills).label("avg_kills"),
+            func.avg(MatchParticipant.deaths).label("avg_deaths"),
+            func.avg(MatchParticipant.assists).label("avg_assists"),
+        )
+        .where(MatchParticipant.puuid == puuid)
+    )
+    agg_row = agg.one()
+
+    # most played champion
+    most_played = await session.scalar(
+        select(MatchParticipant.championId)
+        .where(MatchParticipant.puuid == puuid)
+        .group_by(MatchParticipant.championId)
+        .order_by(func.count().desc())
+        .limit(1)
+    )
+
+    # win streak — fetch recent games ordered newest first
+    recent = await session.execute(
+        select(MatchParticipant.win)
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(MatchParticipant.puuid == puuid)
+        .order_by(Match.gameStartTimestamp.desc())
+        .limit(20)
+    )
+    recent_wins = [row.win for row in recent]
+    win_streak = 0
+    for w in recent_wins:
+        if w:
+            win_streak += 1
+        else:
+            break
+
+    avg_deaths = float(agg_row.avg_deaths) if agg_row.avg_deaths else 1
+    avg_kda = round(
+        (float(agg_row.avg_kills or 0) + float(agg_row.avg_assists or 0))
+        / max(avg_deaths, 1),
+        2,
+    )
+
+    result = {
+        "total_games": agg_row.total_games or 0,
+        "winrate": round(float(agg_row.winrate or 0), 1),
+        "avg_kda": avg_kda,
+        "most_played_champion_id": most_played,
+        "win_streak": win_streak,
+    }
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)

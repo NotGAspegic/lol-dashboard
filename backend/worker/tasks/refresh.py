@@ -170,6 +170,24 @@ def refresh_summoner(
     except Exception:
         logger.warning("Cache invalidation failed for puuid=%s", normalized_puuid, exc_info=True)
 
+
+    # invalidate stats caches
+    keys_to_delete = [
+        f"champion_stats:{normalized_puuid}",
+        f"stats_overview:{normalized_puuid}",
+    ]
+    for key in keys_to_delete:
+        r.delete(key)
+
+    # wipe all match list pages
+    cursor = 0
+    while True:
+        cursor, keys = r.scan(cursor, match=f"matches:{normalized_puuid}:*", count=100)
+        if keys:
+            r.delete(*keys)
+        if cursor == 0:
+            break
+
     return {
         "puuid": normalized_puuid,
         "region": normalized_region,
