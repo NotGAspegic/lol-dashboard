@@ -122,7 +122,8 @@ export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
         className="h-80 flex items-center justify-center rounded-lg border text-sm font-mono"
         style={{ borderColor: "rgba(30,155,232,0.1)", color: "#3A5070" }}
       >
-        Not enough data for scatter plot.
+      <span>Not enough data for trend chart.</span>
+      <span className="text-xs">Play more ranked games to see your KDA trend.</span>
       </div>
     );
   }

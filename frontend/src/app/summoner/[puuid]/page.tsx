@@ -2,11 +2,6 @@ import { notFound } from "next/navigation";
 import { getSummoner, getStatsOverview } from "@/lib/api";
 import StatsOverviewCards from "@/components/profile/StatsOverviewCards";
 import RefreshButton from "@/components/profile/RefreshButton";
-import MatchList from "@/components/matches/MatchList";
-import ChampionStatsTable from "@/components/stats/ChampionStatsTable";
-import KDATrendChart from "@/components/charts/KDATrendChart";
-import WinRateChart from "@/components/charts/WinRateChart";
-import PerformanceScatter from "@/components/charts/PerformanceScatter";
 import Tabs from "@/components/profile/Tabs";
 
 interface ProfilePageProps {
@@ -38,26 +33,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* Profile header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          {/* Profile icon */}
-          <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div className="relative flex-shrink-0">
             <img
               src={profileIconUrl}
-              alt="Profile icon"
+              alt={`${shortId} profile icon`}
               width={72}
               height={72}
               className="rounded-xl border-2 border-primary/40"
             />
-            <span
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-surface2 border border-primary/30 text-primary text-xs font-mono px-2 py-0.5 rounded-full whitespace-nowrap"
-            >
+            <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-surface2 border border-primary/30 text-primary text-xs font-mono px-2 py-0.5 rounded-full whitespace-nowrap">
               {summonerData.summonerLevel}
             </span>
           </div>
-
-          {/* Name + region */}
           <div className="flex flex-col gap-1">
             <h1 className="text-xl font-bold text-white tracking-tight">
               {shortId}
@@ -67,7 +56,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </span>
           </div>
         </div>
-
         <RefreshButton puuid={puuid} />
       </div>
 

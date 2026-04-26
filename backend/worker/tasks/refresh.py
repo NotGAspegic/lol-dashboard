@@ -314,7 +314,7 @@ def onboard_summoner(
     fanout_async = ingest_summoner_matches.apply_async(
         args=[summoner_dto.puuid, normalized_region],
         kwargs={
-            "count": 100,
+            "count": 20,
             "queue": queue,
             "since_match_id": None,
         },

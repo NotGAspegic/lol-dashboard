@@ -88,16 +88,91 @@ export default function ChampionStatsTable({ puuid }: ChampionStatsTableProps) {
     })
     .slice(0, 10);
 
+    const headerClass =
+    "text-left text-xs font-mono uppercase tracking-wider text-dim cursor-pointer hover:text-white transition-colors select-none pb-2";
+
   if (filtered.length === 0) {
     return (
-      <p className="text-dim text-sm font-mono">
-        No champions with {minGames}+ games yet.
-      </p>
+      <div className="flex flex-col gap-3">
+        {/* Min games filter — always visible */}
+        <div className="flex items-center gap-3">
+          <span className="text-dim text-xs font-mono">Min games:</span>
+          {[3, 5, 10].map((n) => (
+            <button
+              key={n}
+              onClick={() => setMinGames(n)}
+              className={`text-xs font-mono px-2 py-1 rounded border transition-colors ${
+                minGames === n
+                  ? "border-primary text-primary bg-primary/10"
+                  : "border-primary/20 text-dim hover:text-white"
+              }`}
+            >
+              {n}+
+            </button>
+          ))}
+        </div>
+
+        {/* Empty state OR table */}
+        {filtered.length === 0 ? (
+          <div className="p-4 border border-primary/10 rounded-lg">
+            <p className="text-dim text-sm font-mono">
+              Play at least {minGames} ranked games on a champion to see stats here.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-primary/10">
+                  <th className={`${headerClass} w-48`}>Champion</th>
+                  <th className={headerClass} onClick={() => handleSort("games")}>
+                    Games
+                    <SortArrow active={sortKey === "games"} dir={sortDir} />
+                  </th>
+                  <th className={`${headerClass} w-40`} onClick={() => handleSort("winrate")}>
+                    Win Rate
+                    <SortArrow active={sortKey === "winrate"} dir={sortDir} />
+                  </th>
+                  <th className={headerClass} onClick={() => handleSort("kda")}>
+                    KDA
+                    <SortArrow active={sortKey === "kda"} dir={sortDir} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((champ: ChampionStat) => (
+                  <tr
+                    key={champ.championId}
+                    className="border-b border-primary/5 hover:bg-surface2/50 transition-colors"
+                  >
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-2">
+                        <ChampionIconClient championId={champ.championId} size={32} />
+                        <ChampionName championId={champ.championId} />
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <span className="text-white text-sm font-mono">{champ.games}</span>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <WinRateBar winrate={champ.winrate} />
+                    </td>
+                    <td className="py-2">
+                      <span className={`text-sm font-mono ${
+                        champ.kda >= 4 ? "text-primary" : champ.kda >= 2 ? "text-white" : "text-dim"
+                      }`}>
+                        {champ.kda.toFixed(2)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     );
   }
-
-  const headerClass =
-    "text-left text-xs font-mono uppercase tracking-wider text-dim cursor-pointer hover:text-white transition-colors select-none pb-2";
 
   return (
     <div className="flex flex-col gap-3">

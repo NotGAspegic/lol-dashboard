@@ -25,6 +25,7 @@ export default function Navbar() {
         </Link>
 
         <a
+          aria-label="View source on GitHub"
           href="https://github.com/NotGAspegic/lol-dashboard"
           target="_blank"
           rel="noopener noreferrer"

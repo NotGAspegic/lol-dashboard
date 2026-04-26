@@ -32,6 +32,7 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
 
   return (
     <button
+      aria-label="Refresh summoner data"
       onClick={handleRefresh}
       disabled={loading}
       className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-sm text-primary hover:bg-primary/10 transition-colors disabled:opacity-40"

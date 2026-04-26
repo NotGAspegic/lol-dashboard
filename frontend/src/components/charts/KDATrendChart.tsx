@@ -83,7 +83,8 @@ export default function KDATrendChart({ puuid }: KDATrendChartProps) {
           color: "#3A5070",
         }}
       >
-        Not enough data for trend chart.
+      <span>Not enough data for trend chart.</span>
+      <span className="text-xs">Play more ranked games to see your KDA trend.</span>
       </div>
     );
   }

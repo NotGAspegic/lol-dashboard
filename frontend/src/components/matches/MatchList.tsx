@@ -53,7 +53,7 @@ export default function MatchList({ puuid }: MatchListProps) {
   if (allMatches.length === 0) {
     return (
       <div className="text-dim text-sm font-mono p-4 border border-primary/10 rounded-lg">
-        No ranked matches found. Play some ranked games to see your history here.
+        No matches found. This summoner hasn&apos;t played ranked recently.
       </div>
     );
   }
