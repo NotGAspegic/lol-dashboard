@@ -21,6 +21,7 @@ export async function getSummoner(puuid: string): Promise<Summoner> {
 export interface KDATrendPoint {
   game_index: number;
   kda: number;
+  rolling_avg: number;
   kills: number;
   deaths: number;
   assists: number;
@@ -211,6 +212,63 @@ export interface MatchupEntry {
 
 export async function getMatchups(puuid: string): Promise<MatchupEntry[]> {
   const res = await api.get<MatchupEntry[]>(`/summoners/${puuid}/matchups`);
+  return res.data;
+}
+
+export interface PlaystyleScores {
+  aggression: number;
+  farming: number;
+  vision: number;
+  objective_control: number;
+  teamfight: number;
+  consistency: number;
+}
+
+export async function getPlaystyle(puuid: string): Promise<PlaystyleScores> {
+  const res = await api.get<PlaystyleScores>(`/summoners/${puuid}/playstyle`);
+  return res.data;
+}
+
+export interface MatchParticipant {
+  puuid: string;
+  championId: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  goldEarned: number;
+  totalDamageDealtToChampions: number;
+  visionScore: number;
+  individualPosition: string;
+  win: boolean;
+  cs_per_min: number;
+  damage_share: number;
+  kill_participation: number;
+}
+
+export interface MatchDetail {
+  blue_team: MatchParticipant[];
+  red_team: MatchParticipant[];
+  match: {
+    duration: number;
+    patch: string | null;
+    winning_team: number | null;
+  };
+}
+
+export async function getMatchDetail(gameId: number): Promise<MatchDetail> {
+  const res = await api.get<MatchDetail>(`/matches/${gameId}`);
+  return res.data;
+}
+
+export interface GoldDiffPoint {
+  minute: number;
+  blue_gold: number;
+  red_gold: number;
+  gold_diff: number;
+}
+
+export async function getMatchGoldDiff(gameId: number): Promise<GoldDiffPoint[]> {
+  const res = await api.get<GoldDiffPoint[]>(`/matches/${gameId}/gold-diff`);
   return res.data;
 }
 

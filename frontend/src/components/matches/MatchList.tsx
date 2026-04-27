@@ -61,7 +61,7 @@ export default function MatchList({ puuid }: MatchListProps) {
   return (
     <div className="flex flex-col gap-2">
       {allMatches.map((match) => (
-        <MatchRow key={match.gameId} match={match} />
+        <MatchRow key={match.gameId} match={match} puuid={puuid} />
       ))}
       <button
         onClick={handleLoadMore}

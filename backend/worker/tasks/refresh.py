@@ -200,6 +200,8 @@ def refresh_summoner(
 
     r.delete(f"damage_efficiency:{normalized_puuid}")
     r.delete(f"vision_impact:{normalized_puuid}")
+    r.delete(f"matchups:{normalized_puuid}")
+    r.delete(f"playstyle:{normalized_puuid}")
 
     return {
         "puuid": normalized_puuid,

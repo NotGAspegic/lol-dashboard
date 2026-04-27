@@ -172,6 +172,17 @@ curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72y
 
 curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/matchups" | python3 -m json.tool | head -40
 
+curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/playstyle" | python3 -m json.tool | head -40
+
+# Match detail — verify all 10 participants returned grouped by team
+curl "http://localhost:8000/api/v1/matches/7834518187" | python3 -m json.tool
+
+# Gold diff — verify gold oscillates and peaks for winning team
+curl "http://localhost:8000/api/v1/matches/7834518187/gold-diff" | python3 -m json.tool
+
+This returns 1 match in an array. Extract the gameId from the first element.
+
+curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/matches?limit=1&offset=0" | python3 -m json.tool
 ```
 
 

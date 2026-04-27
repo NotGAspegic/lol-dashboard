@@ -692,6 +692,12 @@ async def get_kda_trend(
             "game_start": row.gameStartTimestamp,
         })
 
+    # Add a 5-game rolling average so the trend line is less noisy.
+    kda_values = [point["kda"] for point in result]
+    for i, point in enumerate(result):
+        window = kda_values[max(0, i - 4): i + 1]
+        point["rolling_avg"] = round(sum(window) / len(window), 2)
+
     if redis:
         await cache_set(redis, cache_key, result, ttl=300)
 
@@ -968,6 +974,328 @@ async def get_damage_efficiency(
         "efficiency_score": efficiency_score,
         "total_games": len(games),
     }
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
+
+def _normalize_value(value: float, min_val: float, max_val: float) -> float:
+    """Min-max normalize a value to 0-100."""
+    if value <= min_val:
+        return 0.0
+    if value >= max_val:
+        return 100.0
+    return ((value - min_val) / (max_val - min_val)) * 100.0
+
+
+@router.get("/summoners/{puuid}/playstyle")
+async def get_playstyle(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Return 6 normalized playstyle scores (0-100) representing player fingerprint.
+    
+    Axes:
+    - Aggression: normalized avg kills/game (0=0 kills, 100=15+ kills)
+    - Farming: normalized avg cs_per_min (0=3, 100=10)
+    - Vision: normalized avg vision score (0=0, 100=60+)
+    - Objective Control: normalized avg kill participation (0=0%, 100=100%)
+    - Teamfight: normalized avg assists/game (0=0, 100=20+)
+    - Consistency: 100 - (stddev of KDA × 10) — lower variance = higher score
+    """
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"playstyle:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    # Fetch all match data with team info
+    rows = await session.execute(
+        select(
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+            MatchParticipant.challenges,
+            MatchParticipant.visionScore,
+            MatchParticipant.gameId,
+            MatchParticipant.teamId,
+            Match.gameDuration,
+        )
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(MatchParticipant.puuid == puuid)
+        .where(Match.gameDuration >= 300)  # Filter out remakes
+    )
+
+    games = list(rows)
+    if not games:
+        # Return neutral scores if no games
+        result = {
+            "aggression": 50,
+            "farming": 50,
+            "vision": 50,
+            "objective_control": 50,
+            "teamfight": 50,
+            "consistency": 50,
+        }
+        if redis:
+            await cache_set(redis, cache_key, result, ttl=600)
+        return JSONResponse(content=result)
+
+    # Calculate basic averages
+    avg_kills = sum(g.kills for g in games) / len(games)
+    avg_assists = sum(g.assists for g in games) / len(games)
+    avg_deaths = sum(g.deaths for g in games) / len(games) or 1.0
+    avg_vision = sum(g.visionScore or 0 for g in games) / len(games)
+
+    # Extract cs_per_min from challenges JSONB
+    cs_per_min_values = []
+    for g in games:
+        challenges = g.challenges or {}
+        cs_pm = float(challenges.get("cs_per_min", 0))
+        cs_per_min_values.append(cs_pm)
+    avg_cs_per_min = sum(cs_per_min_values) / len(cs_per_min_values) if cs_per_min_values else 0
+
+    # Calculate KDA values for consistency metric
+    kdas = []
+    for g in games:
+        kda = (g.kills + g.assists) / max(g.deaths, 1)
+        kdas.append(kda)
+
+    avg_kda = sum(kdas) / len(kdas) if kdas else 0
+
+    # Calculate KDA standard deviation for consistency
+    if len(kdas) > 1:
+        variance = sum((kda - avg_kda) ** 2 for kda in kdas) / len(kdas)
+        stddev = variance ** 0.5
+    else:
+        stddev = 0
+
+    # Fetch team kills per game for kill participation calculation
+    game_ids = [g.gameId for g in games]
+    team_stats = {}
+    if game_ids:
+        team_rows = await session.execute(
+            select(
+                MatchParticipant.gameId,
+                MatchParticipant.teamId,
+                func.sum(MatchParticipant.kills).label("team_kills"),
+            )
+            .where(MatchParticipant.gameId.in_(game_ids))
+            .group_by(MatchParticipant.gameId, MatchParticipant.teamId)
+        )
+        for row in team_rows:
+            team_stats[(row.gameId, row.teamId)] = float(row.team_kills or 1)
+
+    # Calculate average kill participation
+    kill_participations = []
+    for g in games:
+        team_kills = team_stats.get((g.gameId, g.teamId), 1.0)
+        player_contrib = g.kills + g.assists
+        participation = (player_contrib / max(team_kills, 1)) * 100
+        kill_participations.append(participation)
+
+    avg_kill_participation = (
+        sum(kill_participations) / len(kill_participations)
+        if kill_participations
+        else 0
+    )
+
+    # Normalize all scores to 0-100
+    aggression = _normalize_value(avg_kills, 0, 15)
+    farming = _normalize_value(avg_cs_per_min, 3, 10)
+    vision = _normalize_value(avg_vision, 0, 60)
+    objective_control = _normalize_value(avg_kill_participation, 0, 100)
+    teamfight = _normalize_value(avg_assists, 0, 20)
+
+    # Consistency: lower stddev = higher consistency
+    consistency = max(0, min(100, 100 - (stddev * 10)))
+
+    result = {
+        "aggression": round(aggression, 1),
+        "farming": round(farming, 1),
+        "vision": round(vision, 1),
+        "objective_control": round(objective_control, 1),
+        "teamfight": round(teamfight, 1),
+        "consistency": round(consistency, 1),
+    }
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=600)
+
+    return JSONResponse(content=result)
+
+
+@router.get("/matches/{game_id}")
+async def get_match_detail(
+    game_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Return full match detail with all 10 participants grouped by team.
+    
+    Includes: puuid, championId, kills, deaths, assists, goldEarned, 
+    totalDamageDealtToChampions, visionScore, individualPosition, win,
+    cs_per_min, damage_share, kill_participation.
+    """
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"match_detail:{game_id}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    # Fetch match metadata
+    match = await session.scalar(select(Match).where(Match.gameId == game_id))
+    if match is None:
+        raise HTTPException(status_code=404, detail="match not found")
+
+    # Fetch all 10 participants
+    participants_rows = await session.execute(
+        select(
+            MatchParticipant.puuid,
+            MatchParticipant.championId,
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+            MatchParticipant.goldEarned,
+            MatchParticipant.totalDamageDealtToChampions,
+            MatchParticipant.visionScore,
+            MatchParticipant.individualPosition,
+            MatchParticipant.teamId,
+            MatchParticipant.win,
+            MatchParticipant.challenges,
+        )
+        .where(MatchParticipant.gameId == game_id)
+        .order_by(MatchParticipant.teamId)
+    )
+
+    all_participants = list(participants_rows)
+    if not all_participants:
+        raise HTTPException(status_code=404, detail="match participants not found")
+
+    # Calculate team kills for kill participation
+    team_kills = {}
+    for p in all_participants:
+        team_id = p.teamId
+        if team_id not in team_kills:
+            team_kills[team_id] = 0
+        team_kills[team_id] += p.kills
+
+    # Format participants and group by team
+    blue_team = []
+    red_team = []
+
+    for p in all_participants:
+        challenges = p.challenges or {}
+        cs_pm = float(challenges.get("cs_per_min", 0))
+        damage_share = float(challenges.get("damage_share", 0))
+        team_k = team_kills.get(p.teamId, 1)
+        kill_part = ((p.kills + p.assists) / max(team_k, 1)) * 100
+
+        participant_data = {
+            "puuid": p.puuid,
+            "championId": p.championId,
+            "kills": p.kills,
+            "deaths": p.deaths,
+            "assists": p.assists,
+            "goldEarned": p.goldEarned,
+            "totalDamageDealtToChampions": p.totalDamageDealtToChampions,
+            "visionScore": p.visionScore,
+            "individualPosition": p.individualPosition,
+            "win": p.win,
+            "cs_per_min": round(cs_pm, 2),
+            "damage_share": round(damage_share, 4),
+            "kill_participation": round(kill_part, 1),
+        }
+
+        if p.teamId == 100:
+            blue_team.append(participant_data)
+        else:
+            red_team.append(participant_data)
+
+    result = {
+        "blue_team": blue_team,
+        "red_team": red_team,
+        "match": {
+            "duration": match.gameDuration,
+            "patch": getattr(match, "patch", None),
+            "winning_team": next((p.teamId for p in all_participants if p.win), None),
+        },
+    }
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
+
+@router.get("/matches/{game_id}/gold-diff")
+async def get_match_gold_diff(
+    game_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Return gold difference between teams at each minute.
+    
+    Positive = blue team (100) leading. Computed from match_timeline_frames.
+    """
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"match_gold_diff:{game_id}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    # Verify match exists
+    match = await session.scalar(select(Match).where(Match.gameId == game_id))
+    if match is None:
+        raise HTTPException(status_code=404, detail="match not found")
+
+    # Get participant IDs so we can map frames to teams
+    participants = await session.execute(
+        select(
+            MatchParticipant.id,
+            MatchParticipant.teamId,
+        )
+        .where(MatchParticipant.gameId == game_id)
+    )
+    
+    team_map = {}  # participant_id -> teamId
+    for p in participants:
+        team_map[p.id] = p.teamId
+
+    # Fetch timeline frames (we need participant_id → teamId mapping)
+    sql = text("""
+        SELECT
+            tf.minute,
+            SUM(CASE WHEN mp."teamId" = 100 THEN tf.total_gold ELSE 0 END) AS blue_gold,
+            SUM(CASE WHEN mp."teamId" = 200 THEN tf.total_gold ELSE 0 END) AS red_gold
+        FROM match_timeline_frames tf
+        JOIN match_participants mp ON mp.id = tf.participant_id
+        WHERE tf.match_id = :game_id
+        GROUP BY tf.minute
+        ORDER BY tf.minute ASC
+    """)
+
+    rows = await session.execute(sql, {"game_id": game_id})
+    result = []
+    for row in rows:
+        blue_g = float(row.blue_gold or 0)
+        red_g = float(row.red_gold or 0)
+        gold_diff = blue_g - red_g
+        result.append({
+            "minute": int(row.minute),
+            "blue_gold": blue_g,
+            "red_gold": red_g,
+            "gold_diff": gold_diff,
+        })
 
     if redis:
         await cache_set(redis, cache_key, result, ttl=300)

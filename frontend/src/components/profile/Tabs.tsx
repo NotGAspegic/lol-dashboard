@@ -8,6 +8,7 @@ import WinRateChart from "@/components/charts/WinRateChart";
 import DamageGoldChart from "@/components/charts/DamageGoldChart";
 import GoldCurveChart from "@/components/charts/GoldCurveChart";
 import VisionImpactChart from "@/components/charts/VisionImpactChart";
+import PlaystyleRadar from "@/components/charts/PlaystyleRadar";
 import MatchupMatrix from "@/components/stats/MatchupMatrix";
 
 const TABS = ["Overview", "Champions", "Performance", "Timeline"] as const;
@@ -64,6 +65,12 @@ export default function Tabs({ puuid }: { puuid: string }) {
                 // Win Rate by Champion
               </p>
               <WinRateChart puuid={puuid} />
+            </div>
+            <div className="flex flex-col gap-3">
+              <p className="text-dim text-xs font-mono uppercase tracking-wider">
+                // Playstyle Fingerprint
+              </p>
+              <PlaystyleRadar puuid={puuid} />
             </div>
           </div>
         </div>

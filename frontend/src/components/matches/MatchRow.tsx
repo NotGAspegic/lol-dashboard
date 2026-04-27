@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Match } from "@/lib/api";
 import { formatDuration, formatRelativeTime, kdaColor } from "@/lib/utils";
 import ChampionIconClient from "@/components/ui/ChampionIconClient";
@@ -13,19 +14,22 @@ const POSITION_SHORT: Record<string, string> = {
 
 interface MatchRowProps {
   match: Match;
+  puuid?: string;
 }
 
-export default function MatchRow({ match }: MatchRowProps) {
+export default function MatchRow({ match, puuid }: MatchRowProps) {
   const kda = ((match.kills + match.assists) / Math.max(match.deaths, 1));
   const kdaStr = kda.toFixed(2);
   const position = POSITION_SHORT[match.individualPosition] ?? "—";
+  const queryString = puuid ? `?puuid=${puuid}` : "";
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg border ${
-      match.win
-        ? "border-green-500/20 bg-green-500/5"
-        : "border-red-500/20 bg-red-500/5"
-    }`}>
+    <Link href={`/match/${match.gameId}${queryString}`}>
+      <div className={`flex items-center gap-3 p-3 rounded-lg border transition-all hover:border-primary/40 cursor-pointer group ${
+        match.win
+          ? "border-green-500/20 bg-green-500/5"
+          : "border-red-500/20 bg-red-500/5"
+      }`}>
       {/* Win/loss bar */}
       <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${
         match.win ? "bg-green-500" : "bg-red-500"
@@ -71,6 +75,12 @@ export default function MatchRow({ match }: MatchRowProps) {
       }`}>
         {match.win ? "WIN" : "LOSS"}
       </span>
-    </div>
+
+      {/* Hover arrow indicator */}
+      <span className="text-xs text-primary/30 group-hover:text-primary/70 transition-colors ml-2">
+        →
+      </span>
+      </div>
+    </Link>
   );
 }
