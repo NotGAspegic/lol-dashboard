@@ -187,6 +187,19 @@ def refresh_summoner(
             r.delete(*keys)
         if cursor == 0:
             break
+    
+    r.delete(f"gold_curves:{normalized_puuid}:None")
+    # also wipe per-champion curves
+    cursor = 0
+    while True:
+        cursor, keys = r.scan(cursor, match=f"gold_curves:{normalized_puuid}:*", count=100)
+        if keys:
+            r.delete(*keys)
+        if cursor == 0:
+            break
+
+    r.delete(f"damage_efficiency:{normalized_puuid}")
+    r.delete(f"vision_impact:{normalized_puuid}")
 
     return {
         "puuid": normalized_puuid,

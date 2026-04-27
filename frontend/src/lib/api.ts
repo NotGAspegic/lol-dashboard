@@ -60,6 +60,65 @@ export async function getPerformanceScatter(
   return res.data;
 }
 
+export interface GoldCurvePoint {
+  minute: number;
+  avg_gold: number;
+}
+
+export async function getGoldCurves(
+  puuid: string,
+  championId?: number
+): Promise<GoldCurvePoint[]> {
+  const params: Record<string, string | number> = {};
+  if (championId !== undefined) params.champion_id = championId;
+  const res = await api.get<GoldCurvePoint[]>(
+    `/summoners/${puuid}/gold-curves`,
+    { params }
+  );
+  return res.data;
+}
+
+export interface VisionImpactPoint {
+  quartile: number;
+  label: string;
+  avg_vision: number;
+  win_rate: number;
+  game_count: number;
+}
+
+export async function getVisionImpact(puuid: string): Promise<VisionImpactPoint[]> {
+  const res = await api.get<VisionImpactPoint[]>(
+    `/summoners/${puuid}/vision-impact`
+  );
+  return res.data;
+}
+
+export interface DamageEfficiencyGame {
+  gameId: number;
+  win: boolean;
+  championId: number;
+  damage_share: number;
+  gold_share: number;
+  bucket: string;
+}
+
+export interface DamageEfficiency {
+  games: DamageEfficiencyGame[];
+  bucket_counts: Record<string, number>;
+  median_damage_share: number;
+  efficiency_score: number;
+  total_games: number;
+}
+
+export async function getDamageEfficiency(
+  puuid: string
+): Promise<DamageEfficiency> {
+  const res = await api.get<DamageEfficiency>(
+    `/summoners/${puuid}/damage-efficiency`
+  );
+  return res.data;
+}
+
 export interface SummonerSearchResponse {
   status: "onboarding" | "ready";
   task_id?: string;
@@ -139,6 +198,19 @@ export async function getChampionStats(puuid: string): Promise<ChampionStat[]> {
 
 export async function getStatsOverview(puuid: string): Promise<StatsOverview> {
   const res = await api.get<StatsOverview>(`/summoners/${puuid}/stats-overview`);
+  return res.data;
+}
+
+export interface MatchupEntry {
+  enemy_champion_id: number;
+  games: number;
+  wins: number;
+  win_rate: number;
+  avg_kda_in_matchup: number;
+}
+
+export async function getMatchups(puuid: string): Promise<MatchupEntry[]> {
+  const res = await api.get<MatchupEntry[]>(`/summoners/${puuid}/matchups`);
   return res.data;
 }
 

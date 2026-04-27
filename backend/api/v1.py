@@ -9,7 +9,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select,func, case
+from sqlalchemy import select,func, case, text
+from sqlalchemy.orm import aliased
 from models.db import Summoner, Match, MatchParticipant
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
@@ -578,6 +579,68 @@ async def get_stats_overview(
 
     return JSONResponse(content=result)
 
+
+@router.get("/summoners/{puuid}/matchups")
+async def get_matchups(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Return aggregated matchup stats vs enemy champions for the same position.
+
+    Finds the lane opponent by self-joining match_participants: mp_player (filtered
+    by puuid) joined to mp_enemy where gameId matches, individualPosition matches,
+    and teamId differs. Aggregates by enemy champion and filters to >= 3 games.
+    """
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"matchups:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    mp_player = aliased(MatchParticipant, name="mp_player")
+    mp_enemy = aliased(MatchParticipant, name="mp_enemy")
+
+    stmt = (
+        select(
+            mp_enemy.championId.label("enemy_champion_id"),
+            func.count().label("games"),
+            func.sum(case((mp_player.win, 1), else_=0)).label("wins"),
+            (func.avg(case((mp_player.win, 1.0), else_=0.0)) * 100).label("win_rate"),
+            func.avg(
+                (mp_player.kills + mp_player.assists) / func.greatest(mp_player.deaths, 1)
+            ).label("avg_kda_in_matchup"),
+        )
+        .join(
+            mp_enemy,
+            (mp_player.gameId == mp_enemy.gameId)
+            & (mp_player.individualPosition == mp_enemy.individualPosition)
+            & (mp_player.teamId != mp_enemy.teamId),
+        )
+        .where(mp_player.puuid == puuid)
+        .group_by(mp_enemy.championId)
+        .having(func.count() >= 3)
+        .order_by(func.count().desc())
+    )
+
+    rows = await session.execute(stmt)
+    result = []
+    for row in rows:
+        result.append({
+            "enemy_champion_id": row.enemy_champion_id,
+            "games": int(row.games),
+            "wins": int(row.wins),
+            "win_rate": float(row.win_rate) if row.win_rate is not None else 0.0,
+            "avg_kda_in_matchup": round(float(row.avg_kda_in_matchup or 0.0), 2),
+        })
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
 @router.get("/summoners/{puuid}/kda-trend")
 async def get_kda_trend(
     puuid: str,
@@ -680,6 +743,231 @@ async def get_performance_scatter(
             "win": row.win,
             "game_duration": row.gameDuration,
         })
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
+
+@router.get("/summoners/{puuid}/gold-curves")
+async def get_gold_curves(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    champion_id: int | None = None,
+) -> JSONResponse:
+    """Average gold per minute curve across all games for a summoner."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"gold_curves:{puuid}:{champion_id}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    # build the raw SQL — ROW_NUMBER reconstructs participant_id (1-10)
+    # from insertion order, which matches Riot API participant order
+    champion_filter = ""
+    params: dict = {"puuid": puuid}
+
+    if champion_id is not None:
+        champion_filter = 'AND mp."championId" = :champion_id'
+        params["champion_id"] = champion_id
+
+    sql = text(f"""
+        WITH ranked_participants AS (
+            SELECT
+                mp."gameId",
+                mp.puuid,
+                ROW_NUMBER() OVER (
+                    PARTITION BY mp."gameId" ORDER BY mp.id ASC
+                ) AS participant_id
+            FROM match_participants mp
+            JOIN matches m ON m."gameId" = mp."gameId"
+            WHERE mp.puuid = :puuid
+              AND m."gameDuration" >= 300
+              {champion_filter}
+        )
+        SELECT
+            tf.minute,
+            ROUND(AVG(tf.total_gold)::numeric, 0) AS avg_gold
+        FROM match_timeline_frames tf
+        JOIN ranked_participants rp
+            ON tf.match_id = rp."gameId"
+            AND tf.participant_id = rp.participant_id
+        WHERE tf.minute <= 35
+        GROUP BY tf.minute
+        ORDER BY tf.minute ASC
+    """)
+
+    rows = await session.execute(sql, params)
+    result = [
+        {"minute": row.minute, "avg_gold": int(row.avg_gold)}
+        for row in rows
+    ]
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
+
+@router.get("/summoners/{puuid}/vision-impact")
+async def get_vision_impact(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Win rate by vision score quartile."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"vision_impact:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+
+    vision_sql = text("""
+        WITH quartiled AS (
+            SELECT
+                win,
+                "visionScore",
+                NTILE(4) OVER (ORDER BY "visionScore") AS quartile
+            FROM match_participants
+            WHERE puuid = :puuid
+        )
+        SELECT
+            quartile,
+            ROUND(AVG("visionScore")::numeric, 1) AS avg_vision,
+            ROUND(AVG(CASE WHEN win THEN 1.0 ELSE 0.0 END) * 100, 1) AS win_rate,
+            COUNT(*) AS game_count
+        FROM quartiled
+        GROUP BY quartile
+        ORDER BY quartile
+    """)
+
+    rows = await session.execute(vision_sql, {"puuid": puuid})
+
+    labels = ["Low Vision", "Below Avg", "Above Avg", "High Vision"]
+    result = [
+        {
+            "quartile": row.quartile,
+            "label": labels[row.quartile - 1],
+            "avg_vision": float(row.avg_vision),
+            "win_rate": float(row.win_rate),
+            "game_count": row.game_count,
+        }
+        for row in rows
+    ]
+
+    if redis:
+        await cache_set(redis, cache_key, result, ttl=300)
+
+    return JSONResponse(content=result)
+
+@router.get("/summoners/{puuid}/damage-efficiency")
+async def get_damage_efficiency(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Per-game damage share vs gold share for efficiency analysis."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"damage_efficiency:{puuid}"
+
+    if redis:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return JSONResponse(content=cached)
+        
+    efficiency_sql = text("""
+            WITH team_gold AS (
+                SELECT
+                    "gameId",
+                    "teamId",
+                    SUM("goldEarned") AS total_team_gold
+                FROM match_participants
+                GROUP BY "gameId", "teamId"
+            ),
+            player_games AS (
+                SELECT
+                    mp."gameId",
+                    mp.win,
+                    mp."championId",
+                    (mp.challenges->>'damage_share')::float AS damage_share,
+                    mp."goldEarned"::float / NULLIF(tg.total_team_gold, 0) AS gold_share
+                FROM match_participants mp
+                JOIN team_gold tg
+                    ON tg."gameId" = mp."gameId"
+                    AND tg."teamId" = mp."teamId"
+                WHERE mp.puuid = :puuid
+                AND mp.challenges->>'damage_share' IS NOT NULL
+            ),
+            median_cte AS (
+                SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (
+                    ORDER BY damage_share
+                ) AS median_ds
+                FROM player_games
+            )
+            SELECT
+                pg."gameId",
+                pg.win,
+                pg."championId",
+                ROUND(pg.damage_share::numeric, 4) AS damage_share,
+                ROUND(pg.gold_share::numeric, 4)   AS gold_share,
+                ROUND(m.median_ds::numeric, 4)     AS median_damage_share,
+                CASE
+                    WHEN pg.damage_share >= m.median_ds AND pg.win      THEN 'high_dmg_win'
+                    WHEN pg.damage_share >= m.median_ds AND NOT pg.win  THEN 'high_dmg_loss'
+                    WHEN pg.damage_share <  m.median_ds AND pg.win      THEN 'low_dmg_win'
+                    ELSE 'low_dmg_loss'
+                END AS bucket
+            FROM player_games pg
+            CROSS JOIN median_cte m
+            ORDER BY pg."gameId" DESC
+        """)
+
+    rows = await session.execute(efficiency_sql, {"puuid": puuid})
+    games = []
+    bucket_counts: dict[str, int] = {
+        "high_dmg_win": 0,
+        "high_dmg_loss": 0,
+        "low_dmg_win": 0,
+        "low_dmg_loss": 0,
+    }
+
+    median_damage_share = None
+
+    for row in rows:
+        if median_damage_share is None:
+            median_damage_share = float(row.median_damage_share)
+
+        bucket_counts[row.bucket] += 1
+        games.append({
+            "gameId": row.gameId,
+            "win": row.win,
+            "championId": row.championId,
+            "damage_share": float(row.damage_share),
+            "gold_share": float(row.gold_share) if row.gold_share else 0.0,
+            "bucket": row.bucket,
+        })
+
+    # efficiency score — % of games above the diagonal (dmg > gold share)
+    above_diagonal = sum(
+        1 for g in games if g["damage_share"] > g["gold_share"]
+    )
+    efficiency_score = round(
+        (above_diagonal / len(games) * 100) if games else 0, 1
+    )
+
+    result = {
+        "games": games,
+        "bucket_counts": bucket_counts,
+        "median_damage_share": median_damage_share,
+        "efficiency_score": efficiency_score,
+        "total_games": len(games),
+    }
 
     if redis:
         await cache_set(redis, cache_key, result, ttl=300)

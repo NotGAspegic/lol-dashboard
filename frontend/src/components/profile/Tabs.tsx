@@ -5,9 +5,12 @@ import MatchList from "@/components/matches/MatchList";
 import ChampionStatsTable from "@/components/stats/ChampionStatsTable";
 import KDATrendChart from "@/components/charts/KDATrendChart";
 import WinRateChart from "@/components/charts/WinRateChart";
-import PerformanceScatter from "@/components/charts/PerformanceScatter";
+import DamageGoldChart from "@/components/charts/DamageGoldChart";
+import GoldCurveChart from "@/components/charts/GoldCurveChart";
+import VisionImpactChart from "@/components/charts/VisionImpactChart";
+import MatchupMatrix from "@/components/stats/MatchupMatrix";
 
-const TABS = ["Overview", "Champions", "Performance"] as const;
+const TABS = ["Overview", "Champions", "Performance", "Timeline"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function Tabs({ puuid }: { puuid: string }) {
@@ -71,6 +74,12 @@ export default function Tabs({ puuid }: { puuid: string }) {
         <div className="flex flex-col gap-6">
           <ChampionStatsTable puuid={puuid} />
           <WinRateChart puuid={puuid} />
+          <div className="flex flex-col gap-3">
+            <p className="text-dim text-xs font-mono uppercase tracking-wider">
+              // Matchup History
+            </p>
+            <MatchupMatrix puuid={puuid} />
+          </div>
         </div>
       )}
 
@@ -78,9 +87,35 @@ export default function Tabs({ puuid }: { puuid: string }) {
       {active === "Performance" && (
         <div className="flex flex-col gap-3">
           <p className="text-dim text-xs font-mono uppercase tracking-wider">
-            // Performance Scatter — KDA vs Damage Share
+            // Damage vs Gold Efficiency
           </p>
-          <PerformanceScatter puuid={puuid} />
+          <DamageGoldChart puuid={puuid} />
+        </div>
+      )}
+
+      {/* Timeline */}
+      {active === "Timeline" && (
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3">
+            <p className="text-dim text-xs font-mono uppercase tracking-wider">
+              // Gold Curve — Average Gold Per Minute
+            </p>
+            <GoldCurveChart puuid={puuid} />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <p className="text-dim text-xs font-mono uppercase tracking-wider">
+              // Vision Score Impact on Win Rate
+            </p>
+            <VisionImpactChart puuid={puuid} />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <p className="text-dim text-xs font-mono uppercase tracking-wider">
+              // Damage vs Gold Efficiency
+            </p>
+            <DamageGoldChart puuid={puuid} />
+          </div>
         </div>
       )}
     </div>

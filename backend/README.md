@@ -166,4 +166,15 @@ cd backend && python ingest.py --summoner "Name#TAG" --region euw1 --count 50
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/summoners/{puuid}/refresh
+
+curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/damage-efficiency" | python3 -m json.tool | head -40
+
+
+curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/matchups" | python3 -m json.tool | head -40
+
 ```
+
+
+
+
+
