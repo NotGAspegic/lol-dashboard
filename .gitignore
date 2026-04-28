@@ -11,6 +11,9 @@ node_modules/
 # DB Data
 pgdata/
 
+# ML artifacts
+backend/ml/models/
+
 # Logs
 logs/
 

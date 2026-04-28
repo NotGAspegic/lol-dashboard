@@ -165,8 +165,12 @@ cd backend && python ingest.py --summoner "Name#TAG" --region euw1 --count 50
 ## Manual Refresh
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/summoners/{puuid}/refresh
+curl -X POST http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/refresh
+```
 
+## Manual Refresh
+
+```bash
 curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/damage-efficiency" | python3 -m json.tool | head -40
 
 
@@ -180,9 +184,13 @@ curl "http://localhost:8000/api/v1/matches/7834518187" | python3 -m json.tool
 # Gold diff — verify gold oscillates and peaks for winning team
 curl "http://localhost:8000/api/v1/matches/7834518187/gold-diff" | python3 -m json.tool
 
-This returns 1 match in an array. Extract the gameId from the first element.
+#This returns 1 match in an array. Extract the gameId from the first element.
 
 curl "http://localhost:8000/api/v1/summoners/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw/matches?limit=1&offset=0" | python3 -m json.tool
+
+#Tilt Detection
+
+curl "http://localhost:8000/api/v1/predict/tilt/sSgLCSbC5TSfM-4fDmQgWU8jaykJVuCQ72ySEHpVVm7Dxwq2lqlSatU0_b30_dtpGiHS5aRNIZJmXw" | python3 -m json.tool
 ```
 
 

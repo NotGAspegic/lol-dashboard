@@ -21,6 +21,7 @@ try:
     from ..config import settings
     from ..database import get_db_session, test_connection
     from ..models.db import Summoner
+    from ..ml.predictors.tilt_predictor import predict_tilt as run_tilt_prediction
     from ..riot.client import RiotClient
     from ..worker.celery_app import celery_app
     from ..worker.tasks.refresh import onboard_summoner, refresh_summoner
@@ -28,6 +29,7 @@ except ImportError:
     from config import settings
     from database import get_db_session, test_connection
     from models.db import Summoner
+    from ml.predictors.tilt_predictor import predict_tilt as run_tilt_prediction
     from riot.client import RiotClient
     from worker.celery_app import celery_app
     from worker.tasks.refresh import onboard_summoner, refresh_summoner
@@ -76,6 +78,15 @@ class TaskStatusResponse(BaseModel):
 
     status: Literal["PENDING", "STARTED", "SUCCESS", "FAILURE"]
     result: Any | None
+
+
+class TiltPredictionResponse(BaseModel):
+    """Tilt prediction payload for a summoner."""
+
+    tilt_score: float | None
+    tilt_level: str
+    reasons: list[str]
+    games_analyzed: int
 
 
 @router.get("/health")
@@ -316,6 +327,40 @@ STATUS_MESSAGES = {
     "SUCCESS":  "Ready",
     "FAILURE":  "Error — please try again",
 }
+
+
+def _tilt_level_from_score(score: float | None) -> str:
+    if score is None:
+        return "insufficient_data"
+    if score >= 0.7:
+        return "high"
+    if score >= 0.4:
+        return "moderate"
+    return "low"
+
+
+@router.get("/predict/tilt/{puuid}", response_model=TiltPredictionResponse)
+async def predict_tilt_endpoint(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse | TiltPredictionResponse:
+    """Return cached tilt risk prediction and plain-English reasons."""
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"tilt_prediction:{puuid}"
+
+    if redis is not None:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return TiltPredictionResponse(**cached)
+
+    prediction = await run_tilt_prediction(puuid, session)
+    payload = TiltPredictionResponse(**prediction)
+
+    if redis is not None:
+        await cache_set(redis, cache_key, payload.model_dump(), ttl=1800)
+
+    return payload
 
 @router.get("/tasks/{task_id}/status")
 async def get_task_status(task_id: str) -> JSONResponse:
