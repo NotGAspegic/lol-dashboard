@@ -15,6 +15,35 @@ class SummonerDTO(BaseModel):
     )
     profileIconId: int
     summonerLevel: int
+    gameName: str | None = None
+    tagLine: str | None = None
+
+
+class AccountDTO(BaseModel):
+    """Subset of Riot account-v1 DTO used for friendly profile identity."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    puuid: str
+    gameName: str
+    tagLine: str
+
+
+class LeagueEntryDTO(BaseModel):
+    """Subset of Riot league-v4 entry data used for ranked profile summaries."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    queueType: str
+    tier: str
+    rank: str | None = None
+    leaguePoints: int
+    wins: int
+    losses: int
+    hotStreak: bool = False
+    veteran: bool = False
+    freshBlood: bool = False
+    inactive: bool = False
 
 
 class ParticipantDTO(BaseModel):

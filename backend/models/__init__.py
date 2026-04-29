@@ -1,4 +1,5 @@
 from .riot_dtos import (
+    LeagueEntryDTO,
     MatchDTO,
     MatchInfoDTO,
     ParticipantDTO,
@@ -10,6 +11,7 @@ from .riot_dtos import (
 
 __all__ = [
     "SummonerDTO",
+    "LeagueEntryDTO",
     "ParticipantDTO",
     "MatchInfoDTO",
     "MatchDTO",

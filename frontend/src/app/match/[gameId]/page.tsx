@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ChampionIconClient from "@/components/ui/ChampionIconClient";
 import GoldDiffChart from "@/components/charts/GoldDiffChart";
-import { getMatchDetail, getMatchGoldDiff } from "@/lib/api";
+import { getMatchDetail, getMatchGoldDiff, getSummoner } from "@/lib/api";
+import { buildSummonerProfilePath } from "@/lib/summonerRoute";
 
 interface MatchPageProps {
   params: Promise<{ gameId: string }>;
@@ -25,7 +26,8 @@ function kdaColor(kda: number): string {
 
 interface ParticipantRowProps {
   champion_id: number;
-  puuid: string;
+  display_name: string;
+  profile_href: string;
   kills: number;
   deaths: number;
   assists: number;
@@ -38,7 +40,8 @@ interface ParticipantRowProps {
 
 function ParticipantRow({
   champion_id,
-  puuid,
+  display_name,
+  profile_href,
   kills,
   deaths,
   assists,
@@ -49,8 +52,6 @@ function ParticipantRow({
   is_winner,
 }: ParticipantRowProps) {
   const kda = (kills + assists) / Math.max(deaths, 1);
-  const kdaStr = kda.toFixed(2);
-  const shortPuuid = puuid.slice(0, 8);
 
   return (
     <tr
@@ -66,7 +67,9 @@ function ParticipantRow({
         <ChampionIconClient championId={champion_id} size={32} />
       </td>
       <td className="px-3 py-3 text-sm font-mono text-dim">
-        {shortPuuid}
+        <Link href={profile_href} className="hover:text-white transition-colors">
+          {display_name}
+        </Link>
         {is_current_player && (
           <span className="ml-2 inline-block text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
             You
@@ -115,6 +118,16 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
 
   const match = matchDetail.value;
   const golds = goldDiff.value;
+  const participantPuuids = Array.from(
+    new Set([...match.blue_team, ...match.red_team].map((participant) => participant.puuid))
+  );
+  const participantSummoners = await Promise.all(
+    participantPuuids.map(async (puuid) => {
+      const summoner = await getSummoner(puuid).catch(() => null);
+      return [puuid, summoner] as const;
+    })
+  );
+  const summonerByPuuid = new Map(participantSummoners);
 
   // Sort teams by damage descending
   const blueTeamSorted = [...match.blue_team].sort(
@@ -124,11 +137,57 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
     (a, b) => b.totalDamageDealtToChampions - a.totalDamageDealtToChampions
   );
 
+  function renderParticipantRow(
+    participant: (typeof match.blue_team)[number],
+    isWinner: boolean
+  ) {
+    const summoner = summonerByPuuid.get(participant.puuid) ?? null;
+    const profileHref = summoner
+      ? buildSummonerProfilePath({
+          puuid: participant.puuid,
+          region: summoner.region,
+          gameName: summoner.game_name,
+          tagLine: summoner.tag_line,
+        })
+      : `/summoner/${participant.puuid}`;
+    const displayName = summoner?.game_name && summoner.tag_line
+      ? `${summoner.game_name}#${summoner.tag_line}`
+      : participant.puuid.slice(0, 8).toUpperCase();
+
+    return (
+      <ParticipantRow
+        key={participant.puuid}
+        champion_id={participant.championId}
+        display_name={displayName}
+        profile_href={profileHref}
+        kills={participant.kills}
+        deaths={participant.deaths}
+        assists={participant.assists}
+        damage={participant.totalDamageDealtToChampions}
+        gold={participant.goldEarned}
+        vision={participant.visionScore}
+        is_current_player={currentPuuid === participant.puuid}
+        is_winner={isWinner}
+      />
+    );
+  }
+
   const matchDuration = match.match.duration
     ? formatDuration(match.match.duration * 1000)
     : "Unknown";
 
-  const backHref = currentPuuid ? `/summoner/${currentPuuid}` : "/";
+  let backHref = "/";
+  if (currentPuuid) {
+    const currentSummoner = summonerByPuuid.get(currentPuuid) ?? null;
+    backHref = currentSummoner
+      ? buildSummonerProfilePath({
+          puuid: currentPuuid,
+          region: currentSummoner.region,
+          gameName: currentSummoner.game_name,
+          tagLine: currentSummoner.tag_line,
+        })
+      : `/summoner/${currentPuuid}`;
+  }
   const isBlueWin = match.match.winning_team === 100;
 
   return (
@@ -193,21 +252,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
                 </tr>
               </thead>
               <tbody>
-                {blueTeamSorted.map((p) => (
-                  <ParticipantRow
-                    key={p.puuid}
-                    champion_id={p.championId}
-                    puuid={p.puuid}
-                    kills={p.kills}
-                    deaths={p.deaths}
-                    assists={p.assists}
-                    damage={p.totalDamageDealtToChampions}
-                    gold={p.goldEarned}
-                    vision={p.visionScore}
-                    is_current_player={currentPuuid === p.puuid}
-                    is_winner={isBlueWin}
-                  />
-                ))}
+                {blueTeamSorted.map((participant) => renderParticipantRow(participant, isBlueWin))}
               </tbody>
             </table>
           </div>
@@ -246,21 +291,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
                 </tr>
               </thead>
               <tbody>
-                {redTeamSorted.map((p) => (
-                  <ParticipantRow
-                    key={p.puuid}
-                    champion_id={p.championId}
-                    puuid={p.puuid}
-                    kills={p.kills}
-                    deaths={p.deaths}
-                    assists={p.assists}
-                    damage={p.totalDamageDealtToChampions}
-                    gold={p.goldEarned}
-                    vision={p.visionScore}
-                    is_current_player={currentPuuid === p.puuid}
-                    is_winner={!isBlueWin}
-                  />
-                ))}
+                {redTeamSorted.map((participant) => renderParticipantRow(participant, !isBlueWin))}
               </tbody>
             </table>
           </div>

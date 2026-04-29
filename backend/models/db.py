@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -21,6 +21,9 @@ class Summoner(Base):
     id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     profileIconId: Mapped[int] = mapped_column(Integer, nullable=False)
     summonerLevel: Mapped[int] = mapped_column(Integer, nullable=False)
+    game_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tag_line: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    riot_id_slug: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     match_history_cursor: Mapped[str | None] = mapped_column(String(32), nullable=True)
     region: Mapped[str] = mapped_column(String(32), nullable=False)
     last_updated: Mapped[datetime] = mapped_column(
@@ -81,6 +84,36 @@ class MatchParticipant(Base):
     perks: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
     match: Mapped[Match] = relationship(back_populates="participants")
+
+
+class RankSnapshot(Base):
+    """Daily snapshot of a summoner's ranked queue state for historical LP charts."""
+
+    __tablename__ = "rank_snapshots"
+    __table_args__ = (
+        UniqueConstraint("puuid", "queue_type", "snapshot_date", name="uq_rank_snapshots_puuid_queue_date"),
+        Index("ix_rank_snapshots_puuid_queue_captured_at", "puuid", "queue_type", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    puuid: Mapped[str] = mapped_column(
+        String(78),
+        ForeignKey("summoners.puuid", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    queue_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    tier: Mapped[str] = mapped_column(String(32), nullable=False)
+    rank: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    league_points: Mapped[int] = mapped_column(Integer, nullable=False)
+    wins: Mapped[int] = mapped_column(Integer, nullable=False)
+    losses: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
 
 
 class MatchTimelineFrame(Base):

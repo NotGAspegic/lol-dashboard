@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from config import settings
 from database_sync import SyncSessionFactory
-from db.ops_sync import upsert_summoner_sync
+from db.ops_sync import upsert_rank_snapshots_sync, upsert_summoner_sync
 from models.db import Summoner
 from models.riot_dtos import SummonerDTO
 from riot.client import RiotClient
@@ -36,6 +36,64 @@ def _normalize_regions(region: str) -> tuple[str, str]:
         platform_region = normalized_region
 
     return normalized_region, platform_region
+
+
+def _invalidate_profile_cache_sync(puuid: str) -> None:
+    try:
+        import redis as redis_sync
+
+        r = redis_sync.from_url(settings.redis_url, decode_responses=True)
+        keys_to_delete = [
+            f"summoner:{puuid}",
+            f"ranked_summary:{puuid}",
+            f"champion_stats:{puuid}",
+            f"stats_overview:{puuid}",
+            f"tilt_prediction:{puuid}",
+            f"damage_efficiency:{puuid}",
+            f"vision_impact:{puuid}",
+            f"matchups:{puuid}",
+            f"playstyle:{puuid}",
+        ]
+        r.delete(*keys_to_delete)
+
+        cursor = 0
+        while True:
+            cursor, keys = r.scan(cursor, match=f"matches:{puuid}:*", count=100)
+            if keys:
+                r.delete(*keys)
+            if cursor == 0:
+                break
+
+        cursor = 0
+        while True:
+            cursor, keys = r.scan(cursor, match=f"gold_curves:{puuid}:*", count=100)
+            if keys:
+                r.delete(*keys)
+            if cursor == 0:
+                break
+
+        r.close()
+        logger.debug("Cache invalidated for puuid=%s", puuid)
+    except Exception:
+        logger.warning("Cache invalidation failed for puuid=%s", puuid, exc_info=True)
+
+
+async def _fetch_ranked_entries(
+    *,
+    puuid: str,
+    platform_region: str,
+) -> list:
+    if not puuid:
+        return []
+
+    async with RiotClient(
+        settings.riot_api_key.get_secret_value(),
+        redis_url=settings.redis_url,
+    ) as riot_client:
+        return await riot_client.get_ranked_entries_by_puuid(
+            puuid=puuid,
+            region=platform_region,
+        )
 
 
 @shared_task(
@@ -72,10 +130,17 @@ def refresh_summoner(
             settings.riot_api_key.get_secret_value(),
             redis_url=settings.redis_url,
         ) as riot_client:
-            return await riot_client.get_summoner_by_puuid(
+            summoner = await riot_client.get_summoner_by_puuid(
                 puuid=normalized_puuid,
                 region=platform_region,
             )
+            account = await riot_client.get_account_by_puuid(
+                puuid=normalized_puuid,
+                region=platform_region,
+            )
+            summoner.gameName = account.gameName
+            summoner.tagLine = account.tagLine
+            return summoner
 
     try:
         summoner_dto = asyncio.run(_fetch_summoner_profile())
@@ -129,6 +194,13 @@ def refresh_summoner(
 
     with SyncSessionFactory() as session:
         upsert_summoner_sync(session, summoner_dto , region=normalized_region)
+        ranked_entries = asyncio.run(
+            _fetch_ranked_entries(
+                puuid=normalized_puuid,
+                platform_region=platform_region,
+            )
+        )
+        upsert_rank_snapshots_sync(session, normalized_puuid, ranked_entries)
         session.commit()
 
     fanout_async = ingest_summoner_matches.apply_async(
@@ -151,57 +223,7 @@ def refresh_summoner(
         fanout_async.id,
     )
 
-    # invalidate cached summoner data so next read is fresh
-    try:
-        import redis as redis_sync
-        r = redis_sync.from_url(settings.redis_url, decode_responses=True)
-        r.delete(f"summoner:{normalized_puuid}")
-
-        cursor = 0
-        while True:
-            cursor, keys = r.scan(cursor, match=f"matches:{normalized_puuid}:*", count=100)
-            if keys:
-                r.delete(*keys)
-            if cursor == 0:
-                break
-
-        r.close()
-        logger.debug("Cache invalidated for puuid=%s", normalized_puuid)
-    except Exception:
-        logger.warning("Cache invalidation failed for puuid=%s", normalized_puuid, exc_info=True)
-
-
-    # invalidate stats caches
-    keys_to_delete = [
-        f"champion_stats:{normalized_puuid}",
-        f"stats_overview:{normalized_puuid}",
-    ]
-    for key in keys_to_delete:
-        r.delete(key)
-
-    # wipe all match list pages
-    cursor = 0
-    while True:
-        cursor, keys = r.scan(cursor, match=f"matches:{normalized_puuid}:*", count=100)
-        if keys:
-            r.delete(*keys)
-        if cursor == 0:
-            break
-    
-    r.delete(f"gold_curves:{normalized_puuid}:None")
-    # also wipe per-champion curves
-    cursor = 0
-    while True:
-        cursor, keys = r.scan(cursor, match=f"gold_curves:{normalized_puuid}:*", count=100)
-        if keys:
-            r.delete(*keys)
-        if cursor == 0:
-            break
-
-    r.delete(f"damage_efficiency:{normalized_puuid}")
-    r.delete(f"vision_impact:{normalized_puuid}")
-    r.delete(f"matchups:{normalized_puuid}")
-    r.delete(f"playstyle:{normalized_puuid}")
+    _invalidate_profile_cache_sync(normalized_puuid)
 
     return {
         "puuid": normalized_puuid,
@@ -215,6 +237,7 @@ def refresh_summoner(
             "profileIconId": summoner_dto.profileIconId,
             "summonerLevel": summoner_dto.summonerLevel,
         },
+        "ranked_snapshots_updated": True,
     }
     
 
@@ -324,6 +347,13 @@ def onboard_summoner(
             }
 
         upsert_summoner_sync(session, summoner_dto , region=normalized_region)
+        ranked_entries = asyncio.run(
+            _fetch_ranked_entries(
+                puuid=summoner_dto.puuid,
+                platform_region=platform_region,
+            )
+        )
+        upsert_rank_snapshots_sync(session, summoner_dto.puuid, ranked_entries)
         session.commit()
 
     fanout_async = ingest_summoner_matches.apply_async(
@@ -359,6 +389,55 @@ def onboard_summoner(
             "profileIconId": summoner_dto.profileIconId,
             "summonerLevel": summoner_dto.summonerLevel,
         },
+        "ranked_snapshots_updated": True,
+    }
+
+
+@shared_task(
+    bind=True,
+    name="worker.tasks.refresh.snapshot_summoner_rank",
+    max_retries=MAX_RETRIES,
+    default_retry_delay=RATE_LIMIT_RETRY_DELAY_SECONDS,
+)
+def snapshot_summoner_rank(
+    self,
+    puuid: str,
+    region: str,
+) -> dict[str, Any]:
+    """Fetch current ranked queue data and persist a daily snapshot for one tracked summoner."""
+    normalized_puuid = puuid.strip()
+    normalized_region, platform_region = _normalize_regions(region)
+
+    with SyncSessionFactory() as session:
+        summoner = session.scalar(select(Summoner).where(Summoner.puuid == normalized_puuid))
+        if summoner is None:
+            return {"puuid": normalized_puuid, "snapshotted": False, "missing": True}
+
+    try:
+        ranked_entries = asyncio.run(
+            _fetch_ranked_entries(
+                puuid=normalized_puuid,
+                platform_region=platform_region,
+            )
+        )
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 429:
+            raise self.retry(exc=exc, countdown=RATE_LIMIT_RETRY_DELAY_SECONDS)
+        if status_code is not None and 500 <= status_code < 600:
+            raise self.retry(exc=exc, countdown=SERVER_ERROR_RETRY_DELAY_SECONDS, max_retries=MAX_RETRIES)
+        raise
+
+    with SyncSessionFactory() as session:
+        upsert_rank_snapshots_sync(session, normalized_puuid, ranked_entries)
+        session.commit()
+
+    _invalidate_profile_cache_sync(normalized_puuid)
+
+    return {
+        "puuid": normalized_puuid,
+        "snapshotted": True,
+        "queues": [entry.queueType for entry in ranked_entries],
     }
 
 
@@ -389,5 +468,33 @@ def refresh_all_tracked_summoners() -> dict[str, Any]:
 
     logger.info(
         "refresh_all_tracked_summoners dispatched %s refresh jobs", len(rows)
+    )
+    return {"dispatched": len(rows)}
+
+
+@shared_task(
+    name="worker.tasks.refresh.snapshot_all_ranked_histories_weekly",
+)
+def snapshot_all_ranked_histories_weekly() -> dict[str, Any]:
+    """Dispatch weekly rank snapshot jobs for all tracked summoners."""
+    with SyncSessionFactory() as db:
+        rows = db.execute(
+            select(Summoner.puuid, Summoner.region)
+        ).all()
+
+    if not rows:
+        logger.info("snapshot_all_ranked_histories_weekly: no eligible summoners")
+        return {"dispatched": 0}
+
+    for index, (puuid, region) in enumerate(rows):
+        snapshot_summoner_rank.apply_async(
+            args=[puuid, region],
+            countdown=index * 5,
+            queue="refresh",
+        )
+
+    logger.info(
+        "snapshot_all_ranked_histories_weekly dispatched %s rank snapshot jobs",
+        len(rows),
     )
     return {"dispatched": len(rows)}

@@ -8,7 +8,13 @@ import { RotateCcw, Search, Shuffle, Swords, UserRound } from "lucide-react";
 import DraftProbabilityGauge from "@/components/ml/DraftProbabilityGauge";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
+import {
+  readCurrentSummoner,
+  readCurrentSummonerSnapshot,
+  subscribeToCurrentSummonerStore,
+} from "@/lib/currentSummoner";
 import { getDraftPrediction } from "@/lib/api";
+import { formatSummonerDisplayName } from "@/lib/summonerRoute";
 
 
 interface ChampionOption {
@@ -17,20 +23,7 @@ interface ChampionOption {
   key: string;
 }
 
-const CURRENT_SUMMONER_KEY = "farsight.currentSummonerPuuid";
 const TEAM_SIZE = 5;
-
-function subscribeToCurrentSummoner() {
-  return () => {};
-}
-
-function getStoredPuuid() {
-  try {
-    return window.localStorage.getItem(CURRENT_SUMMONER_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
 
 function ChampionAvatar({
   champion,
@@ -196,13 +189,20 @@ function TeamSlot({
 export default function DraftPage() {
   const searchParams = useSearchParams();
   const queryPuuid = searchParams.get("puuid") ?? "";
-  const initialPuuid = useSyncExternalStore(
-    subscribeToCurrentSummoner,
-    () => queryPuuid || getStoredPuuid(),
-    () => queryPuuid
+  const storedSummonerSnapshot = useSyncExternalStore(
+    subscribeToCurrentSummonerStore,
+    readCurrentSummonerSnapshot,
+    () => ""
   );
-  const [typedPuuid, setTypedPuuid] = useState<string | null>(null);
-  const puuid = typedPuuid ?? initialPuuid;
+  const storedSummoner = storedSummonerSnapshot ? readCurrentSummoner() : null;
+  const initialPuuid = queryPuuid || storedSummoner?.puuid || "";
+  const summonerLabel = storedSummoner
+    ? formatSummonerDisplayName({
+        puuid: storedSummoner.puuid,
+        gameName: storedSummoner.gameName,
+        tagLine: storedSummoner.tagLine,
+      })
+    : (queryPuuid ? queryPuuid.slice(0, 8).toUpperCase() : "");
   const [patch, setPatch] = useState("16.8.1");
   const [champions, setChampions] = useState<ChampionOption[]>([]);
   const [loadingChampions, setLoadingChampions] = useState(true);
@@ -265,15 +265,15 @@ export default function DraftPage() {
   const playerChampionId = blueTeam[playerSlot];
 
   const draftQuery = useQuery({
-    queryKey: ["draft-prediction", puuid, blueTeam, redTeam, playerSlot],
+    queryKey: ["draft-prediction", initialPuuid, blueTeam, redTeam, playerSlot],
     queryFn: () =>
       getDraftPrediction({
-        puuid,
+        puuid: initialPuuid,
         ally_champion_ids: blueTeam as number[],
         enemy_champion_ids: redTeam as number[],
         player_champion_id: playerChampionId as number,
       }),
-    enabled: Boolean(puuid.trim() && hasAllPicks && playerChampionId != null),
+    enabled: Boolean(initialPuuid.trim() && hasAllPicks && playerChampionId != null),
     staleTime: 1000 * 60,
     placeholderData: (previous) => previous,
   });
@@ -365,13 +365,13 @@ export default function DraftPage() {
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="flex-1">
             <label className="mb-2 block text-xs font-mono uppercase tracking-wider text-dim">
-              Player PUUID
+              Tracked Summoner
             </label>
             <input
-              value={puuid}
-              onChange={(event) => setTypedPuuid(event.target.value)}
+              value={summonerLabel}
               className="w-full rounded-lg border border-primary/20 bg-surface px-3 py-3 font-mono text-sm text-white outline-none placeholder:text-dim focus:border-primary/45"
-              placeholder="Tracked summoner puuid"
+              placeholder="BehindYou#Hers"
+              readOnly
             />
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -412,9 +412,9 @@ export default function DraftPage() {
 
           <Card className="sticky top-20 flex flex-col items-center gap-4 p-5">
             {hasAllPicks ? (
-              !puuid.trim() ? (
+              !initialPuuid.trim() ? (
                 <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 text-center">
-                  <div className="text-sm font-semibold text-white">Enter a tracked summoner PUUID</div>
+                  <div className="text-sm font-semibold text-white">Open this tool from a tracked summoner profile</div>
                   <div className="text-xs text-dim">The draft model needs player history to make a prediction.</div>
                 </div>
               ) : draftQuery.isLoading ? (

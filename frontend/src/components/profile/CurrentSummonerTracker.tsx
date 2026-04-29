@@ -2,17 +2,32 @@
 
 import { useEffect } from "react";
 
+import { writeCurrentSummoner } from "@/lib/currentSummoner";
 
-const CURRENT_SUMMONER_KEY = "farsight.currentSummonerPuuid";
 
-export default function CurrentSummonerTracker({ puuid }: { puuid: string }) {
+export default function CurrentSummonerTracker({
+  puuid,
+  region,
+  gameName,
+  tagLine,
+}: {
+  puuid: string;
+  region?: string;
+  gameName?: string | null;
+  tagLine?: string | null;
+}) {
   useEffect(() => {
     try {
-      window.localStorage.setItem(CURRENT_SUMMONER_KEY, puuid);
+      writeCurrentSummoner({
+        puuid,
+        region,
+        gameName,
+        tagLine,
+      });
     } catch {
       // ignore localStorage availability issues
     }
-  }, [puuid]);
+  }, [puuid, region, gameName, tagLine]);
 
   return null;
 }

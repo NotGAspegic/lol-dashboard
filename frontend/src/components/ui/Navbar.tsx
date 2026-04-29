@@ -1,38 +1,9 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-
-const CURRENT_SUMMONER_KEY = "farsight.currentSummonerPuuid";
-
-function subscribe() {
-  return () => {};
-}
-
-function getServerDraftHref() {
-  return "/draft";
-}
-
-function getClientDraftHref() {
-  try {
-    const storedPuuid = window.localStorage.getItem(CURRENT_SUMMONER_KEY);
-    return storedPuuid
-      ? `/draft?puuid=${encodeURIComponent(storedPuuid)}`
-      : "/draft";
-  } catch {
-    return "/draft";
-  }
-}
-
 export default function Navbar() {
-  const draftHref = useSyncExternalStore(
-    subscribe,
-    getClientDraftHref,
-    getServerDraftHref
-  );
-
   return (
     <nav
       className="border-b sticky top-0 z-50 backdrop-blur-sm"
@@ -57,7 +28,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-4 text-sm">
           <Link
-            href={draftHref}
+            href="/draft"
             style={{ color: "#3A5070" }}
             className="hover:text-white transition-colors"
           >

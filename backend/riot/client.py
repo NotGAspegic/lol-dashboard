@@ -11,6 +11,7 @@ import httpx
 from redis.asyncio import Redis
 
 from models import SummonerDTO
+from models.riot_dtos import AccountDTO, LeagueEntryDTO
 from riot.rate_limiter import RiotDualBucketRateLimiter
 
 
@@ -233,7 +234,10 @@ class RiotClient:
         summoner_response = await self._get_with_rate_limit(url=summoner_url, region=platform)
         summoner_response.raise_for_status()
 
-        return SummonerDTO.model_validate(summoner_response.json())
+        payload = summoner_response.json()
+        payload["gameName"] = account_payload.get("gameName")
+        payload["tagLine"] = account_payload.get("tagLine")
+        return SummonerDTO.model_validate(payload)
 
     async def get_summoner_by_puuid(self, puuid: str, region: str) -> SummonerDTO:
         """Fetch summoner-v4 profile data for a known puuid on a platform route."""
@@ -253,6 +257,48 @@ class RiotClient:
         response.raise_for_status()
 
         return SummonerDTO.model_validate(response.json())
+
+    async def get_account_by_puuid(self, puuid: str, region: str) -> AccountDTO:
+        """Fetch Riot account identity data for a known puuid on a regional route."""
+        normalized_puuid = puuid.strip()
+        if not normalized_puuid:
+            raise ValueError("puuid cannot be empty")
+
+        account_url = (
+            f"{regional_base_url(region)}"
+            f"/riot/account/v1/accounts/by-puuid/{quote(normalized_puuid, safe='')}"
+        )
+        response = await self._get_with_rate_limit(url=account_url, region=region)
+        response.raise_for_status()
+
+        return AccountDTO.model_validate(response.json())
+
+    async def get_ranked_entries_by_puuid(
+        self,
+        puuid: str,
+        region: str,
+    ) -> list[LeagueEntryDTO]:
+        """Fetch current ranked queue entries for a summoner by puuid on a platform route."""
+        normalized_puuid = puuid.strip()
+        if not normalized_puuid:
+            raise ValueError("puuid cannot be empty")
+
+        platform = region.strip().lower()
+        if not platform:
+            raise ValueError("region cannot be empty")
+
+        league_url = (
+            f"{platform_base_url(platform)}"
+            f"/lol/league/v4/entries/by-puuid/{quote(normalized_puuid, safe='')}"
+        )
+        response = await self._get_with_rate_limit(url=league_url, region=platform)
+        response.raise_for_status()
+
+        payload = response.json()
+        if not isinstance(payload, list):
+            raise ValueError("Riot league entries response was not a list.")
+
+        return [LeagueEntryDTO.model_validate(entry) for entry in payload]
 
     async def get_match_ids(
         self,

@@ -47,4 +47,9 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(day_of_week="sun", hour="2", minute="0"),
         "options": {"queue": "refresh"},
     },
+    "snapshot-ranked-histories-weekly": {
+        "task": "worker.tasks.refresh.snapshot_all_ranked_histories_weekly",
+        "schedule": crontab(day_of_week="sun", hour="1", minute="15"),
+        "options": {"queue": "refresh"},
+    },
 }

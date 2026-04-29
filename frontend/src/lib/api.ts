@@ -11,10 +11,23 @@ export interface Summoner {
   profileIconId: number;
   summonerLevel: number;
   region?: string;
+  game_name?: string | null;
+  tag_line?: string | null;
+  riot_id_slug?: string | null;
 }
 
 export async function getSummoner(puuid: string): Promise<Summoner> {
   const res = await api.get<Summoner>(`/summoners/${puuid}`);
+  return res.data;
+}
+
+export async function getSummonerByRiotSlug(
+  region: string,
+  riotIdSlug: string
+): Promise<Summoner> {
+  const res = await api.get<Summoner>(
+    `/summoners/by-riot-id/${encodeURIComponent(region)}/${encodeURIComponent(riotIdSlug)}`
+  );
   return res.data;
 }
 
@@ -132,6 +145,16 @@ export interface SummonerSearchResponse {
   summonerLevel?: number;
 }
 
+export interface SummonerSuggestion {
+  puuid: string;
+  profileIconId: number;
+  summonerLevel: number;
+  region?: string | null;
+  game_name: string;
+  tag_line: string;
+  riot_id_slug: string;
+}
+
 export async function searchSummoner(
   gameName: string,
   tagLine: string,
@@ -141,6 +164,17 @@ export async function searchSummoner(
     game_name: gameName,
     tag_line: tagLine,
     region,
+  });
+  return res.data;
+}
+
+export async function getSummonerSuggestions(
+  query: string,
+  region: string,
+  limit = 5
+): Promise<SummonerSuggestion[]> {
+  const res = await api.get<SummonerSuggestion[]>("/summoners/suggest", {
+    params: { query, region, limit },
   });
   return res.data;
 }
@@ -188,6 +222,72 @@ export interface TiltPrediction {
   games_analyzed: number;
 }
 
+export interface RankedTrendPoint {
+  game_index: number;
+  net_wins: number;
+  win: boolean;
+  game_start_timestamp: number;
+}
+
+export interface RankedRecentSummary {
+  games: number;
+  wins: number;
+  losses: number;
+  winrate: number;
+  avg_kda: number;
+  net_wins: number;
+  trend: RankedTrendPoint[];
+}
+
+export interface RankedQueueSummary {
+  queue_type: string;
+  tier: string;
+  rank: string | null;
+  league_points: number;
+  wins: number;
+  losses: number;
+  winrate: number;
+  hot_streak: boolean;
+  veteran: boolean;
+  fresh_blood: boolean;
+  inactive: boolean;
+}
+
+export interface RankHistoryPoint {
+  queue_type: string;
+  tier: string;
+  rank: string | null;
+  league_points: number;
+  wins: number;
+  losses: number;
+  captured_at: string;
+}
+
+export interface RoleSummary {
+  role: string;
+  games: number;
+  wins: number;
+  losses: number;
+  winrate: number;
+  avg_kda: number;
+  share: number;
+}
+
+export interface RankedSummary {
+  solo: RankedQueueSummary | null;
+  flex: RankedQueueSummary | null;
+  solo_source: string;
+  flex_source: string;
+  solo_history: RankHistoryPoint[];
+  flex_history: RankHistoryPoint[];
+  favorite_role: string | null;
+  top_roles: RoleSummary[];
+  tracked_recent_30d: RankedRecentSummary | null;
+  live_rank_status: string;
+  live_rank_message: string;
+  note: string;
+}
+
 export interface DraftPredictionRequest {
   puuid: string;
   ally_champion_ids: number[];
@@ -221,6 +321,11 @@ export async function getChampionStats(puuid: string): Promise<ChampionStat[]> {
 
 export async function getStatsOverview(puuid: string): Promise<StatsOverview> {
   const res = await api.get<StatsOverview>(`/summoners/${puuid}/stats-overview`);
+  return res.data;
+}
+
+export async function getRankedSummary(puuid: string): Promise<RankedSummary> {
+  const res = await api.get<RankedSummary>(`/summoners/${puuid}/ranked-summary`);
   return res.data;
 }
 

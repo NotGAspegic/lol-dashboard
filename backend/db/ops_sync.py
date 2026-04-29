@@ -8,8 +8,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from models.db import Match, MatchParticipant, MatchTimelineFrame, Summoner
-from models.riot_dtos import MatchDTO, ParticipantDTO, SummonerDTO
+from models.db import Match, MatchParticipant, MatchTimelineFrame, RankSnapshot, Summoner
+from models.riot_dtos import LeagueEntryDTO, MatchDTO, ParticipantDTO, SummonerDTO
+from utils.riot_identity import build_riot_id_slug
 
 import time
 
@@ -19,11 +20,19 @@ logger = logging.getLogger(__name__)
 
 def upsert_summoner_sync(session: Session, dto: SummonerDTO, region: str) -> None:
     """Insert or update a summoner row keyed by puuid."""
+    riot_id_slug = (
+        build_riot_id_slug(dto.gameName, dto.tagLine)
+        if dto.gameName and dto.tagLine
+        else None
+    )
     payload = {
         "puuid": dto.puuid,
         "id": dto.id,
         "profileIconId": dto.profileIconId,
         "summonerLevel": dto.summonerLevel,
+        "game_name": dto.gameName,
+        "tag_line": dto.tagLine,
+        "riot_id_slug": riot_id_slug,
         "region": region,
     }
 
@@ -34,10 +43,56 @@ def upsert_summoner_sync(session: Session, dto: SummonerDTO, region: str) -> Non
             "id": stmt.excluded.id,
             "profileIconId": stmt.excluded.profileIconId,
             "summonerLevel": stmt.excluded.summonerLevel,
+            "game_name": stmt.excluded.game_name if dto.gameName else Summoner.game_name,
+            "tag_line": stmt.excluded.tag_line if dto.tagLine else Summoner.tag_line,
+            "riot_id_slug": stmt.excluded.riot_id_slug if riot_id_slug else Summoner.riot_id_slug,
             "region": stmt.excluded.region,
         },
     )
 
+    session.execute(upsert_stmt)
+
+
+def upsert_rank_snapshots_sync(
+    session: Session,
+    puuid: str,
+    entries: list[LeagueEntryDTO],
+    captured_at: datetime | None = None,
+) -> None:
+    """Upsert one daily ranked snapshot row per queue for a summoner."""
+    normalized_puuid = puuid.strip()
+    if not normalized_puuid or not entries:
+        return
+
+    timestamp = captured_at or datetime.now(timezone.utc)
+    snapshot_date = timestamp.date()
+    rows = [
+        {
+            "puuid": normalized_puuid,
+            "queue_type": entry.queueType,
+            "tier": entry.tier,
+            "rank": entry.rank,
+            "league_points": entry.leaguePoints,
+            "wins": entry.wins,
+            "losses": entry.losses,
+            "snapshot_date": snapshot_date,
+            "captured_at": timestamp,
+        }
+        for entry in entries
+    ]
+
+    stmt = insert(RankSnapshot).values(rows)
+    upsert_stmt = stmt.on_conflict_do_update(
+        constraint="uq_rank_snapshots_puuid_queue_date",
+        set_={
+            "tier": stmt.excluded.tier,
+            "rank": stmt.excluded.rank,
+            "league_points": stmt.excluded.league_points,
+            "wins": stmt.excluded.wins,
+            "losses": stmt.excluded.losses,
+            "captured_at": stmt.excluded.captured_at,
+        },
+    )
     session.execute(upsert_stmt)
 
 

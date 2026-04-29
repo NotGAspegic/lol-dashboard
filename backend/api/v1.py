@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import logging
 import time
 from pathlib import Path
@@ -7,21 +8,23 @@ from typing import Any, Literal
 
 from fastapi.responses import JSONResponse
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import select,func, case, text
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import select,func, case, or_, text
 from sqlalchemy.orm import aliased
-from models.db import Summoner, Match, MatchParticipant
+from models.db import Summoner, Match, MatchParticipant, RankSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
 
 from utils.cache import cache_get, cache_set
+from utils.riot_identity import build_riot_id_slug, normalize_region_for_lookup
 
 try:
     from ..config import settings
     from ..database import get_db_session, test_connection
-    from ..models.db import Summoner
+    from ..db.ops import upsert_rank_snapshots
+    from ..models.db import RankSnapshot, Summoner
     from ..ml.model_registry import (
         DRAFT_FEATURES_PATH,
         DRAFT_META_PATH,
@@ -39,7 +42,8 @@ try:
 except ImportError:
     from config import settings
     from database import get_db_session, test_connection
-    from models.db import Summoner
+    from db.ops import upsert_rank_snapshots
+    from models.db import RankSnapshot, Summoner
     from ml.model_registry import (
         DRAFT_FEATURES_PATH,
         DRAFT_META_PATH,
@@ -72,6 +76,21 @@ class SummonerResponse(BaseModel):
     profileIconId: int
     summonerLevel: int
     region: str | None = None
+    game_name: str | None = None
+    tag_line: str | None = None
+    riot_id_slug: str | None = None
+
+
+class SummonerSuggestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    puuid: str
+    profileIconId: int
+    summonerLevel: int
+    region: str | None = None
+    game_name: str
+    tag_line: str
+    riot_id_slug: str
 
 
 class SummonerSearchRequest(BaseModel):
@@ -138,6 +157,72 @@ class DraftPredictionResponse(BaseModel):
     note: str
 
 
+class RankedTrendPoint(BaseModel):
+    game_index: int
+    net_wins: int
+    win: bool
+    game_start_timestamp: int
+
+
+class RankedRecentSummary(BaseModel):
+    games: int
+    wins: int
+    losses: int
+    winrate: float
+    avg_kda: float
+    net_wins: int
+    trend: list[RankedTrendPoint]
+
+
+class RankedQueueSummary(BaseModel):
+    queue_type: str
+    tier: str
+    rank: str | None = None
+    league_points: int
+    wins: int
+    losses: int
+    winrate: float
+    hot_streak: bool = False
+    veteran: bool = False
+    fresh_blood: bool = False
+    inactive: bool = False
+
+
+class RankHistoryPoint(BaseModel):
+    queue_type: str
+    tier: str
+    rank: str | None = None
+    league_points: int
+    wins: int
+    losses: int
+    captured_at: str
+
+
+class RoleSummary(BaseModel):
+    role: str
+    games: int
+    wins: int
+    losses: int
+    winrate: float
+    avg_kda: float
+    share: float
+
+
+class RankedSummaryResponse(BaseModel):
+    solo: RankedQueueSummary | None
+    flex: RankedQueueSummary | None
+    solo_source: str = "unavailable"
+    flex_source: str = "unavailable"
+    solo_history: list[RankHistoryPoint] = Field(default_factory=list)
+    flex_history: list[RankHistoryPoint] = Field(default_factory=list)
+    favorite_role: str | None = None
+    top_roles: list[RoleSummary] = Field(default_factory=list)
+    tracked_recent_30d: RankedRecentSummary | None
+    live_rank_status: str = "unknown"
+    live_rank_message: str = ""
+    note: str
+
+
 class ModelStatus(BaseModel):
     loaded: bool
     trained_at: str
@@ -177,6 +262,65 @@ async def health(request: Request) -> dict[str, Any]:
     }
 
 
+@router.get("/summoners/suggest", response_model=list[SummonerSuggestionResponse])
+async def suggest_summoners(
+    query: str = Query(min_length=1),
+    region: str | None = None,
+    limit: int = Query(default=5, ge=1, le=10),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SummonerSuggestionResponse]:
+    normalized_query = query.strip().lower()
+    if len(normalized_query) < 2:
+        return []
+
+    riot_id_expr = func.concat(Summoner.game_name, "#", Summoner.tag_line)
+    contains_pattern = f"%{normalized_query}%"
+    prefix_pattern = f"{normalized_query}%"
+
+    stmt = (
+        select(Summoner)
+        .where(
+            Summoner.game_name.is_not(None),
+            Summoner.tag_line.is_not(None),
+            Summoner.riot_id_slug.is_not(None),
+            or_(
+                func.lower(Summoner.game_name).like(contains_pattern),
+                func.lower(Summoner.tag_line).like(contains_pattern),
+                func.lower(riot_id_expr).like(contains_pattern),
+            ),
+        )
+        .order_by(
+            case(
+                (func.lower(riot_id_expr).like(prefix_pattern), 0),
+                (func.lower(Summoner.game_name).like(prefix_pattern), 1),
+                (func.lower(Summoner.tag_line).like(prefix_pattern), 2),
+                else_=3,
+            ),
+            func.length(Summoner.game_name),
+            Summoner.game_name.asc(),
+        )
+        .limit(limit)
+    )
+
+    if region:
+        stmt = stmt.where(Summoner.region == normalize_region_for_lookup(region))
+
+    result = await session.scalars(stmt)
+    rows = result.all()
+    return [
+        SummonerSuggestionResponse(
+            puuid=row.puuid,
+            profileIconId=row.profileIconId,
+            summonerLevel=row.summonerLevel,
+            region=row.region,
+            game_name=row.game_name or "",
+            tag_line=row.tag_line or "",
+            riot_id_slug=row.riot_id_slug or "",
+        )
+        for row in rows
+    ]
+
+
 @router.get("/summoners/{puuid}", response_model=SummonerResponse)
 async def get_summoner(
     puuid: str,
@@ -191,8 +335,10 @@ async def get_summoner(
         t0 = time.perf_counter()
         cached = await cache_get(redis, cache_key)
         if cached is not None:
-            logger.debug("summoner served from cache in %.1fms", (time.perf_counter() - t0) * 1000)
-            return SummonerResponse(**cached)
+            if cached.get("game_name") and cached.get("tag_line") and cached.get("riot_id_slug"):
+                logger.debug("summoner served from cache in %.1fms", (time.perf_counter() - t0) * 1000)
+                return SummonerResponse(**cached)
+            logger.debug("summoner cache missing riot identity; falling back to DB")
 
     # cache miss — hit DB
     t0 = time.perf_counter()
@@ -200,6 +346,23 @@ async def get_summoner(
     if summoner is None:
         raise HTTPException(status_code=404, detail="summoner not found")
     logger.debug("summoner loaded from DB in %.1fms", (time.perf_counter() - t0) * 1000)
+
+    if not summoner.game_name or not summoner.tag_line or not summoner.riot_id_slug:
+        try:
+            async with RiotClient(
+                settings.riot_api_key.get_secret_value(),
+                redis_url=settings.redis_url,
+            ) as riot_client:
+                account = await riot_client.get_account_by_puuid(
+                    puuid=summoner.puuid,
+                    region=summoner.region,
+                )
+            summoner.game_name = account.gameName
+            summoner.tag_line = account.tagLine
+            summoner.riot_id_slug = build_riot_id_slug(account.gameName, account.tagLine)
+            await session.commit()
+        except Exception:
+            logger.warning("riot identity backfill failed for puuid=%s", puuid, exc_info=True)
 
     # store in cache
     if redis:
@@ -209,8 +372,35 @@ async def get_summoner(
             "profileIconId": summoner.profileIconId,
             "summonerLevel": summoner.summonerLevel,
             "region": summoner.region,
+            "game_name": summoner.game_name,
+            "tag_line": summoner.tag_line,
+            "riot_id_slug": summoner.riot_id_slug,
         }
         await cache_set(redis, cache_key, payload, ttl=300)
+
+    return summoner
+
+
+@router.get("/summoners/by-riot-id/{region}/{riot_id_slug}", response_model=SummonerResponse)
+async def get_summoner_by_riot_id_slug(
+    region: str,
+    riot_id_slug: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SummonerResponse:
+    normalized_region = normalize_region_for_lookup(region)
+    normalized_slug = riot_id_slug.strip().lower()
+
+    if not normalized_slug:
+        raise HTTPException(status_code=404, detail="summoner not found")
+
+    summoner = await session.scalar(
+        select(Summoner).where(
+            Summoner.region == normalized_region,
+            func.lower(Summoner.riot_id_slug) == normalized_slug,
+        )
+    )
+    if summoner is None:
+        raise HTTPException(status_code=404, detail="summoner not found")
 
     return summoner
 
@@ -343,10 +533,21 @@ async def search_summoner(
         )
 
     if existing_puuid is not None:
-        # already tracked — return stored data immediately as 200
-        summoner = await session.scalar(
+        existing_summoner = await session.scalar(
             select(Summoner).where(Summoner.puuid == summoner_dto.puuid)
         )
+        if existing_summoner is not None:
+            existing_summoner.game_name = summoner_dto.gameName or existing_summoner.game_name
+            existing_summoner.tag_line = summoner_dto.tagLine or existing_summoner.tag_line
+            if summoner_dto.gameName and summoner_dto.tagLine:
+                existing_summoner.riot_id_slug = build_riot_id_slug(
+                    summoner_dto.gameName,
+                    summoner_dto.tagLine,
+                )
+            await session.commit()
+
+        # already tracked — return stored data immediately as 200
+        summoner = await session.scalar(select(Summoner).where(Summoner.puuid == summoner_dto.puuid))
         return JSONResponse(
             status_code=200,
             content={
@@ -355,6 +556,8 @@ async def search_summoner(
                 "profileIconId": summoner.profileIconId,
                 "summonerLevel": summoner.summonerLevel,
                 "region": summoner.region,
+                "game_name": summoner.game_name or normalized_game_name,
+                "tag_line": summoner.tag_line or normalized_tag_line,
             },
         )
 
@@ -409,6 +612,63 @@ def _require_model_files(paths: list[Path]) -> None:
         )
 
 
+def _build_ranked_queue_summary(entry: Any) -> RankedQueueSummary:
+    total_games = entry.wins + entry.losses
+    winrate = (entry.wins / total_games * 100) if total_games else 0.0
+    return RankedQueueSummary(
+        queue_type=entry.queueType,
+        tier=entry.tier,
+        rank=entry.rank,
+        league_points=entry.leaguePoints,
+        wins=entry.wins,
+        losses=entry.losses,
+        winrate=round(winrate, 1),
+        hot_streak=bool(entry.hotStreak),
+        veteran=bool(entry.veteran),
+        fresh_blood=bool(entry.freshBlood),
+        inactive=bool(entry.inactive),
+    )
+
+
+def _build_ranked_queue_summary_from_snapshot(snapshot: Any) -> RankedQueueSummary:
+    total_games = snapshot.wins + snapshot.losses
+    winrate = (snapshot.wins / total_games * 100) if total_games else 0.0
+    return RankedQueueSummary(
+        queue_type=snapshot.queue_type,
+        tier=snapshot.tier,
+        rank=snapshot.rank,
+        league_points=int(snapshot.league_points),
+        wins=int(snapshot.wins),
+        losses=int(snapshot.losses),
+        winrate=round(winrate, 1),
+        hot_streak=False,
+        veteran=False,
+        fresh_blood=False,
+        inactive=False,
+    )
+
+
+def _build_rank_history_point(snapshot: RankSnapshot) -> RankHistoryPoint:
+    return RankHistoryPoint(
+        queue_type=snapshot.queue_type,
+        tier=snapshot.tier,
+        rank=snapshot.rank,
+        league_points=int(snapshot.league_points),
+        wins=int(snapshot.wins),
+        losses=int(snapshot.losses),
+        captured_at=snapshot.captured_at.isoformat(),
+    )
+
+
+def _normalize_role_label(team_position: str | None, individual_position: str | None) -> str | None:
+    role = (team_position or individual_position or "").strip().upper()
+    if role in {"TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"}:
+        return role
+    if role == "SUPPORT":
+        return "UTILITY"
+    return None
+
+
 @router.get("/predict/tilt/{puuid}", response_model=TiltPredictionResponse)
 async def predict_tilt_endpoint(
     puuid: str,
@@ -429,6 +689,226 @@ async def predict_tilt_endpoint(
 
     if redis is not None:
         await cache_set(redis, cache_key, payload.model_dump(), ttl=1800)
+
+    return payload
+
+
+@router.get("/summoners/{puuid}/ranked-summary", response_model=RankedSummaryResponse)
+async def get_ranked_summary(
+    puuid: str,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> RankedSummaryResponse:
+    redis = getattr(request.app.state, "redis", None)
+    cache_key = f"ranked_summary:{puuid}"
+
+    if redis is not None:
+        cached = await cache_get(redis, cache_key)
+        if cached is not None:
+            return RankedSummaryResponse(**cached)
+
+    summoner = await session.scalar(select(Summoner).where(Summoner.puuid == puuid))
+    if summoner is None:
+        raise HTTPException(status_code=404, detail="summoner not found")
+
+    solo_summary: RankedQueueSummary | None = None
+    flex_summary: RankedQueueSummary | None = None
+    solo_source = "unavailable"
+    flex_source = "unavailable"
+    live_rank_status = "unknown"
+    live_rank_message = "Live ranked data was not checked."
+
+    if summoner.region:
+        try:
+            async with RiotClient(
+                settings.riot_api_key.get_secret_value(),
+                redis_url=settings.redis_url,
+            ) as riot_client:
+                entries = await riot_client.get_ranked_entries_by_puuid(
+                    puuid=summoner.puuid,
+                    region=summoner.region,
+                )
+        except Exception:
+            logger.warning("ranked summary Riot fetch failed for puuid=%s", puuid, exc_info=True)
+            entries = []
+            live_rank_status = "riot_error"
+            live_rank_message = "Riot live ranked lookup failed for this profile just now."
+        else:
+            live_rank_status = "no_entry"
+            live_rank_message = "No current ranked solo or flex entry was returned by Riot for this profile."
+
+        for entry in entries:
+            if entry.queueType == "RANKED_SOLO_5x5":
+                solo_summary = _build_ranked_queue_summary(entry)
+                solo_source = "live"
+            elif entry.queueType == "RANKED_FLEX_SR":
+                flex_summary = _build_ranked_queue_summary(entry)
+                flex_source = "live"
+
+        if solo_summary or flex_summary:
+            await upsert_rank_snapshots(session, puuid, entries)
+            await session.commit()
+            live_rank_status = "available"
+            live_rank_message = "Live ranked queue data is available from Riot."
+    else:
+        live_rank_status = "missing_region"
+        live_rank_message = "This profile is missing a platform region, so live ranked lookup could not run."
+
+    snapshot_result = await session.execute(
+        select(RankSnapshot)
+        .where(RankSnapshot.puuid == puuid)
+        .order_by(RankSnapshot.captured_at.desc())
+    )
+    snapshot_rows = snapshot_result.scalars().all()
+
+    latest_solo_snapshot = next(
+        (row for row in snapshot_rows if row.queue_type == "RANKED_SOLO_5x5"),
+        None,
+    )
+    latest_flex_snapshot = next(
+        (row for row in snapshot_rows if row.queue_type == "RANKED_FLEX_SR"),
+        None,
+    )
+
+    if solo_summary is None and latest_solo_snapshot is not None:
+        solo_summary = _build_ranked_queue_summary_from_snapshot(latest_solo_snapshot)
+        solo_source = "snapshot"
+    if flex_summary is None and latest_flex_snapshot is not None:
+        flex_summary = _build_ranked_queue_summary_from_snapshot(latest_flex_snapshot)
+        flex_source = "snapshot"
+
+    solo_history = [
+        _build_rank_history_point(snapshot)
+        for snapshot in reversed(
+            [row for row in snapshot_rows if row.queue_type == "RANKED_SOLO_5x5"][:16]
+        )
+    ]
+    flex_history = [
+        _build_rank_history_point(snapshot)
+        for snapshot in reversed(
+            [row for row in snapshot_rows if row.queue_type == "RANKED_FLEX_SR"][:16]
+        )
+    ]
+
+    role_rows = await session.execute(
+        select(
+            MatchParticipant.teamPosition,
+            MatchParticipant.individualPosition,
+            MatchParticipant.win,
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+        )
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(
+            MatchParticipant.puuid == puuid,
+            Match.queueId.in_([420, 440]),
+        )
+        .order_by(Match.gameStartTimestamp.desc())
+        .limit(80)
+    )
+
+    role_buckets: dict[str, dict[str, float]] = {}
+    total_role_games = 0
+    for row in role_rows:
+        role = _normalize_role_label(row.teamPosition, row.individualPosition)
+        if role is None:
+            continue
+        bucket = role_buckets.setdefault(
+            role,
+            {"games": 0, "wins": 0, "kills": 0.0, "deaths": 0.0, "assists": 0.0},
+        )
+        bucket["games"] += 1
+        bucket["wins"] += 1 if row.win else 0
+        bucket["kills"] += float(row.kills)
+        bucket["deaths"] += float(row.deaths)
+        bucket["assists"] += float(row.assists)
+        total_role_games += 1
+
+    role_order = {"TOP": 0, "JUNGLE": 1, "MIDDLE": 2, "BOTTOM": 3, "UTILITY": 4}
+    top_roles = [
+        RoleSummary(
+            role=role,
+            games=int(bucket["games"]),
+            wins=int(bucket["wins"]),
+            losses=int(bucket["games"] - bucket["wins"]),
+            winrate=round((bucket["wins"] / bucket["games"]) * 100, 1) if bucket["games"] else 0.0,
+            avg_kda=round((bucket["kills"] + bucket["assists"]) / max(bucket["deaths"], 1.0), 2),
+            share=round((bucket["games"] / total_role_games) * 100, 1) if total_role_games else 0.0,
+        )
+        for role, bucket in sorted(
+            role_buckets.items(),
+            key=lambda item: (-item[1]["games"], role_order.get(item[0], 99)),
+        )
+    ]
+    favorite_role = top_roles[0].role if top_roles else None
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoff_ms = int(cutoff.timestamp() * 1000)
+    recent_rows = await session.execute(
+        select(
+            MatchParticipant.kills,
+            MatchParticipant.deaths,
+            MatchParticipant.assists,
+            MatchParticipant.win,
+            Match.gameStartTimestamp,
+        )
+        .join(Match, Match.gameId == MatchParticipant.gameId)
+        .where(
+            MatchParticipant.puuid == puuid,
+            Match.gameStartTimestamp >= cutoff_ms,
+            Match.queueId.in_([420, 440]),
+        )
+        .order_by(Match.gameStartTimestamp.asc())
+    )
+
+    recent_matches = recent_rows.all()
+    tracked_recent_30d: RankedRecentSummary | None = None
+    if recent_matches:
+        wins = sum(1 for row in recent_matches if row.win)
+        losses = len(recent_matches) - wins
+        avg_kda = sum((row.kills + row.assists) / max(row.deaths, 1) for row in recent_matches) / len(recent_matches)
+        trend_source = recent_matches[-12:]
+        running_net_wins = 0
+        trend: list[RankedTrendPoint] = []
+        for index, row in enumerate(trend_source, start=1):
+            running_net_wins += 1 if row.win else -1
+            trend.append(
+                RankedTrendPoint(
+                    game_index=index,
+                    net_wins=running_net_wins,
+                    win=bool(row.win),
+                    game_start_timestamp=int(row.gameStartTimestamp),
+                )
+            )
+
+        tracked_recent_30d = RankedRecentSummary(
+            games=len(recent_matches),
+            wins=wins,
+            losses=losses,
+            winrate=round((wins / len(recent_matches)) * 100, 1),
+            avg_kda=round(avg_kda, 2),
+            net_wins=wins - losses,
+            trend=trend,
+        )
+
+    payload = RankedSummaryResponse(
+        solo=solo_summary,
+        flex=flex_summary,
+        solo_source=solo_source,
+        flex_source=flex_source,
+        solo_history=solo_history,
+        flex_history=flex_history,
+        favorite_role=favorite_role,
+        top_roles=top_roles,
+        tracked_recent_30d=tracked_recent_30d,
+        live_rank_status=live_rank_status,
+        live_rank_message=live_rank_message,
+        note="Rank data comes from Riot live league entries. The 30d section reflects tracked ranked matches in your local history.",
+    )
+
+    if redis is not None:
+        await cache_set(redis, cache_key, payload.model_dump(), ttl=600)
 
     return payload
 

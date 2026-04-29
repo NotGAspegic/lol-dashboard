@@ -5,8 +5,6 @@ from typing import Any
 
 from celery import shared_task
 
-from ml.retrain import run_retrain_pipeline
-
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +14,8 @@ logger = logging.getLogger(__name__)
 )
 def retrain_models_weekly() -> dict[str, Any]:
     """Weekly model refresh that only persists models when AUC improves materially."""
+    from ml.retrain import run_retrain_pipeline
+
     results = run_retrain_pipeline(min_improvement=0.01)
     payload = {
         model_name: {
