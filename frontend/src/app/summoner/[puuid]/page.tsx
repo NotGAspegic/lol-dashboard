@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSummoner, getStatsOverview } from "@/lib/api";
 import TiltBanner from "@/components/ml/TiltBanner";
+import TiltPredictionPrefetch from "@/components/ml/TiltPredictionPrefetch";
 import CurrentSummonerTracker from "@/components/profile/CurrentSummonerTracker";
 import StatsOverviewCards from "@/components/profile/StatsOverviewCards";
 import RefreshButton from "@/components/profile/RefreshButton";
@@ -35,6 +36,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   return (
     <div className="flex flex-col gap-6">
       <CurrentSummonerTracker puuid={puuid} />
+      <TiltPredictionPrefetch puuid={puuid} />
 
       {/* Profile header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

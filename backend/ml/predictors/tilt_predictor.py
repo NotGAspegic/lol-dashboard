@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any
 
 import pandas as pd
@@ -36,6 +37,16 @@ def _feature_row_from_games(games_df: pd.DataFrame) -> pd.Series:
     if features_df.empty:
         raise ValueError("Unable to compute tilt features from the available games")
     return features_df.iloc[0]
+
+
+@lru_cache(maxsize=1)
+def _load_tilt_runtime() -> tuple[Any, list[str], Any, Any]:
+    registry = load_model_registry()["tilt_v1"]
+    pipeline = registry["model"]
+    feature_names = registry["feature_names"]
+    scaler = pipeline.named_steps["scaler"]
+    explainer = shap.TreeExplainer(pipeline.named_steps["clf"])
+    return pipeline, feature_names, scaler, explainer
 
 
 async def _fetch_recent_games(session: AsyncSession, puuid: str, limit: int) -> pd.DataFrame:
@@ -96,16 +107,13 @@ async def predict_tilt(puuid: str, session: AsyncSession) -> dict[str, Any]:
         }
 
     feature_row = _feature_row_from_games(games_df)
-    registry = load_model_registry()["tilt_v1"]
-    pipeline = registry["model"]
-    feature_names = registry["feature_names"]
+    pipeline, feature_names, scaler, explainer = _load_tilt_runtime()
 
     feature_values = [float(feature_row[name]) for name in feature_names]
     feature_frame = pd.DataFrame([feature_values], columns=feature_names)
 
     tilt_score = float(pipeline.predict_proba(feature_frame)[0][1])
-    scaled_x = pipeline.named_steps["scaler"].transform(feature_frame)
-    explainer = shap.TreeExplainer(pipeline.named_steps["clf"])
+    scaled_x = scaler.transform(feature_frame)
     shap_values = explainer.shap_values(scaled_x)
 
     if isinstance(shap_values, (list, tuple)):
