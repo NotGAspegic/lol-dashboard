@@ -33,4 +33,3 @@ blueprints
 
 backend/ml/models/
 backend/ml/data/*.csv
-backend/ml/data/*.csv
