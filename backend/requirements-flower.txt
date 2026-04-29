@@ -1,0 +1,10 @@
+celery[redis]
+flower
+httpx
+pydantic
+pydantic-settings
+sqlalchemy
+asyncpg
+psycopg2-binary
+python-dotenv
+requests

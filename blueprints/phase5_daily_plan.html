@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 5 — Daily Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500&display=swap');
+  :root {
+    --gold:#C89B3C;--gold-light:#F0E6C8;--gold-dim:#7A5C1E;
+    --bg:#0A0C10;--bg2:#111318;--bg3:#181C24;
+    --border:rgba(200,155,60,.15);--border-bright:rgba(200,155,60,.4);
+    --text:#C8C0B0;--text-dim:#5A5650;--text-bright:#F0E6C8;
+    --blue:#4A9EFF;--teal:#2ABFAA;--red:#E8523C;--purple:#9B72CF;--green:#4CAF72;--amber:#F0A830;
+    --r:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;max-width:860px;margin:0 auto;padding:40px 28px 80px;}
+
+  .hdr{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px;}
+  .hdr-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(200,155,60,.08);border:1px solid var(--border-bright);padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:14px;}
+  h1{font-family:'Syne',sans-serif;font-size:clamp(22px,4vw,36px);font-weight:800;color:var(--gold-light);letter-spacing:-.02em;line-height:1.15;margin-bottom:10px;}
+  h1 span{color:var(--gold);}
+  .hdr p{color:var(--text-dim);font-size:13px;max-width:620px;}
+
+  .phase-chain{display:flex;gap:0;margin:22px 0 0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+  .chain-item{flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border);font-family:'DM Mono',monospace;}
+  .chain-item:last-child{border-right:none;}
+  .chain-item .cn{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:3px;}
+  .chain-item .cv{font-size:12px;font-weight:500;color:var(--text-bright);}
+  .chain-item.active{background:rgba(200,155,60,.06);}
+  .chain-item.active .cv{color:var(--gold);}
+  .chain-item.done .cv{color:var(--green);}
+
+  .progress-wrap{margin:20px 0 0;}
+  .progress-label{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+  .progress-label span:last-child{color:var(--gold);}
+  .progress-track{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width .4s ease;width:0%;}
+
+  .stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;flex:1;min-width:120px;}
+  .stat .slabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:4px;}
+  .stat .sval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--gold);}
+  .stat .sval.blue{color:var(--blue);}.stat .sval.green{color:var(--green);}
+
+  .week-header{display:flex;align-items:center;gap:12px;margin:28px 0 14px;}
+  .week-pill{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:20px;border:1px solid var(--border-bright);color:var(--gold);background:rgba(200,155,60,.06);flex-shrink:0;}
+  .week-line{flex:1;height:1px;background:var(--border);}
+  .week-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);flex-shrink:0;}
+
+  .day{display:grid;grid-template-columns:56px 1fr;gap:0 16px;margin-bottom:10px;position:relative;}
+  .day:not(:last-of-type)::after{content:'';position:absolute;left:27px;top:52px;bottom:-10px;width:2px;background:var(--border);z-index:0;}
+  .day-num-wrap{display:flex;flex-direction:column;align-items:center;padding-top:2px;position:relative;z-index:1;}
+  .day-circle{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gold-dim);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);transition:all .2s;cursor:pointer;flex-shrink:0;}
+  .day-circle.done{background:rgba(200,155,60,.15);border-color:var(--gold);color:var(--gold-light);}
+  .day-circle.done::after{content:'✓';}.day-circle:not(.done)::after{content:attr(data-n);}
+
+  .day-body{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px 16px;transition:border-color .2s;}
+  .day-body:hover{border-color:rgba(200,155,60,.3);}
+  .day-body.done{opacity:.55;}
+
+  .day-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+  .day-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright);line-height:1.3;}
+  .day-meta{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+
+  .time-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);white-space:nowrap;}
+  .focus-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid;white-space:nowrap;}
+  .fp-setup{border-color:rgba(42,191,170,.3);color:var(--teal);background:rgba(42,191,170,.06);}
+  .fp-code{border-color:rgba(155,114,207,.3);color:var(--purple);background:rgba(155,114,207,.06);}
+  .fp-ui{border-color:rgba(200,155,60,.3);color:var(--gold);background:rgba(200,155,60,.06);}
+  .fp-ml{border-color:rgba(232,82,60,.3);color:var(--red);background:rgba(232,82,60,.06);}
+  .fp-db{border-color:rgba(76,175,114,.3);color:var(--green);background:rgba(76,175,114,.06);}
+  .fp-data{border-color:rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);}
+
+  .tasks{list-style:none;padding:0;margin:0;}
+  .tasks li{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px solid rgba(200,155,60,.05);cursor:pointer;border-radius:4px;transition:background .15s;}
+  .tasks li:last-child{border-bottom:none;}
+  .tasks li:hover{background:rgba(200,155,60,.04);}
+  .task-check{width:16px;height:16px;border:1.5px solid var(--text-dim);border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:10px;}
+  .tasks li.checked .task-check{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+  .tasks li.checked .task-check::after{content:'✓';font-weight:700;}
+  .task-text{font-size:13px;color:var(--text);line-height:1.55;}
+  .tasks li.checked .task-text{text-decoration:line-through;color:var(--text-dim);}
+
+  .deliverable{margin-top:12px;padding:10px 14px;background:var(--bg3);border-left:2px solid var(--gold-dim);border-radius:0 4px 4px 0;}
+  .deliverable .dlabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:2px;}
+  .deliverable p{color:var(--text-dim);font-size:12px;margin:0;}
+
+  .snippet{margin-top:12px;background:#0D1117;border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:#C9D1D9;overflow-x:auto;}
+  .snippet .fn{color:#D2A8FF;}.snippet .kw{color:#FF7B72;}.snippet .st{color:#A5D6FF;}.snippet .cm{color:#6E7681;}.snippet .dec{color:#56D364;}.snippet .num{color:#79C0FF;}.snippet .cl{color:#FFA657;}
+
+  .callout{display:flex;gap:12px;padding:12px 16px;border-radius:var(--r);margin:12px 0;border:1px solid;}
+  .callout.warn{background:rgba(200,155,60,.06);border-color:var(--border-bright);color:var(--gold);}
+  .callout.info{background:rgba(74,158,255,.06);border-color:rgba(74,158,255,.25);color:#7BB8FF;}
+  .callout.tip{background:rgba(76,175,114,.06);border-color:rgba(76,175,114,.25);color:#7EC89A;}
+  .callout-icon{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;flex-shrink:0;padding-top:1px;}
+  .callout p{margin:0;color:inherit;font-size:13px;}
+
+  footer{margin-top:48px;border-top:1px solid var(--border);padding-top:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-tag">◆ Phase 5 of 6 — Machine Learning</div>
+  <h1>Predictive Models &<br><span>ML-Powered Insights</span></h1>
+  <p>14 evenings @ 1–2 hrs each. Goal: train a Tilt Detection model and a Draft Win Probability model using your existing match data, serve them from FastAPI, and wire the predictions into the dashboard UI with SHAP-based explanations.</p>
+
+  <div class="phase-chain">
+    <div class="chain-item done"><div class="cn">Phase 1</div><div class="cv">✓ Foundation</div></div>
+    <div class="chain-item done"><div class="cn">Phase 2</div><div class="cv">✓ Pipeline</div></div>
+    <div class="chain-item done"><div class="cn">Phase 3</div><div class="cv">✓ Dashboard</div></div>
+    <div class="chain-item done"><div class="cn">Phase 4</div><div class="cv">✓ Analytics</div></div>
+    <div class="chain-item active"><div class="cn">Phase 5</div><div class="cv">→ ML Models</div></div>
+    <div class="chain-item"><div class="cn">Phase 6</div><div class="cv">Deploy</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Progress</span><span id="pct-label">0 / 14 days complete</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="slabel">Total Days</div><div class="sval">14</div></div>
+  <div class="stat"><div class="slabel">Est. Hours</div><div class="sval blue">21–28 hrs</div></div>
+  <div class="stat"><div class="slabel">Tasks Done</div><div class="sval green" id="tasks-done">0</div></div>
+  <div class="stat"><div class="slabel">Phase End</div><div class="sval" style="font-size:14px;padding-top:3px" id="end-date">—</div></div>
+</div>
+
+
+<!-- WEEK 1 -->
+<div class="week-header">
+  <span class="week-pill">Week 1</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 1–5 · Data Prep + Tilt Detection Model</span>
+</div>
+
+<!-- DAY 1 -->
+<div class="day" id="day-1">
+  <div class="day-num-wrap"><div class="day-circle" data-n="1" onclick="toggleDay(1)"></div></div>
+  <div class="day-body" id="body-1">
+    <div class="day-top">
+      <div class="day-title">ML Environment Setup + Data Export</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Inside <code>backend/</code>, install ML dependencies: <code>pip install scikit-learn xgboost shap pandas numpy joblib</code>. Add them to <code>requirements.txt</code>. These stay in the backend — the ML models are served by FastAPI, not the frontend.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/</code> directory with <code>__init__.py</code>. This is where all training scripts, model files, and feature engineering code live. Create subdirs: <code>ml/training/</code>, <code>ml/models/</code> (gitignored — stores the .pkl files), <code>ml/features/</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>backend/ml/models/</code> to <code>.gitignore</code> — trained model files can be hundreds of MB and should never be committed. Add a <code>README.md</code> in that folder saying "Run train_tilt.py and train_draft.py to regenerate models".</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/export_data.py</code> — a standalone script that connects to your DB and exports training data as CSV files. Run it with <code>python -m ml.export_data</code>. It should export: (1) <code>ml/data/match_participants.csv</code> — all rows from <code>match_participants</code>, (2) <code>ml/data/matches.csv</code> — all rows from <code>matches</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Verify the exports: <code>wc -l backend/ml/data/match_participants.csv</code> should show 8000+ rows (your ~800 matches × 10 participants). <code>head -3 backend/ml/data/match_participants.csv</code> should show the column headers and first two rows.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># backend/ml/export_data.py</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">from</span> sqlalchemy <span class="kw">import</span> create_engine
+<span class="kw">from</span> config <span class="kw">import</span> settings
+<span class="kw">import</span> os
+
+engine = create_engine(settings.sync_database_url)
+os.<span class="fn">makedirs</span>(<span class="st">"ml/data"</span>, exist_ok=<span class="kw">True</span>)
+
+mp = pd.<span class="fn">read_sql</span>(<span class="st">"SELECT * FROM match_participants"</span>, engine)
+m  = pd.<span class="fn">read_sql</span>(<span class="st">"SELECT * FROM matches"</span>, engine)
+
+mp.<span class="fn">to_csv</span>(<span class="st">"ml/data/match_participants.csv"</span>, index=<span class="kw">False</span>)
+m.<span class="fn">to_csv</span>(<span class="st">"ml/data/matches.csv"</span>, index=<span class="kw">False</span>)
+<span class="fn">print</span>(f<span class="st">"Exported {len(mp)} participants from {len(m)} matches"</span>)
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 1 Deliverable</div>
+      <p>ML directory structure created. Two CSV files exported with 8000+ participant rows. Dependencies installed and importable.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 2 -->
+<div class="day" id="day-2">
+  <div class="day-num-wrap"><div class="day-circle" data-n="2" onclick="toggleDay(2)"></div></div>
+  <div class="day-body" id="body-2">
+    <div class="day-top">
+      <div class="day-title">Tilt Detection — Feature Engineering</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-data">Data</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/features/tilt_features.py</code>. This module takes a DataFrame of a player's recent matches (sorted newest first) and computes a rolling window of features from their last N games. The output is one feature row per "snapshot" — a point in time where you're assessing if the player is tilted.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement <code>compute_tilt_features(games_df, window=10)</code>. For each game at index i, look at games [i, i+window) and compute: <strong>consecutive_losses</strong> (count from the start until first win), <strong>kda_slope</strong> (linear regression slope of KDA over the window), <strong>death_trend</strong> (slope of deaths), <strong>inter_game_minutes_mean</strong> (avg minutes between game starts), <strong>inter_game_minutes_min</strong> (shortest gap — rapid queuing indicator), <strong>champ_variety</strong> (unique champions played).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Compute KDA for each game: <code>df['kda'] = (df['kills'] + df['assists']) / df['deaths'].clip(lower=1)</code>. Compute slopes using <code>scipy.stats.linregress</code> — fit a line to the KDA values in the window, the slope tells you if performance is improving or degrading over time.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Generate the tilt label using Option A (self-supervised): label a window as <code>tilt=1</code> when BOTH: (a) consecutive_losses ≥ 3 AND (b) the window's avg KDA is ≥ 20% below that player's overall career KDA. This is objective and reproducible from data you already have.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the feature extraction: load your CSV, filter to one summoner's games, sort by timestamp, call <code>compute_tilt_features</code>. Print the first 5 feature rows. Verify <code>consecutive_losses</code> matches what you'd expect from looking at the raw wins/losses column.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># tilt_features.py — core feature computation</span>
+<span class="kw">from</span> scipy.stats <span class="kw">import</span> linregress
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="kw">def</span> <span class="fn">slope</span>(series):
+    <span class="st">"""Linear regression slope — positive = improving, negative = declining."""</span>
+    x = np.<span class="fn">arange</span>(<span class="fn">len</span>(series))
+    <span class="kw">if</span> <span class="fn">len</span>(series) < <span class="num">2</span>: <span class="kw">return</span> <span class="num">0.0</span>
+    s, *_ = <span class="fn">linregress</span>(x, series)
+    <span class="kw">return</span> <span class="fn">float</span>(s)
+
+<span class="kw">def</span> <span class="fn">consecutive_losses</span>(win_series):
+    <span class="st">"""Count losses from the start of the series until first win."""</span>
+    count = <span class="num">0</span>
+    <span class="kw">for</span> w <span class="kw">in</span> win_series:
+        <span class="kw">if not</span> w: count += <span class="num">1</span>
+        <span class="kw">else</span>: <span class="kw">break</span>
+    <span class="kw">return</span> count
+
+<span class="kw">def</span> <span class="fn">compute_tilt_features</span>(games_df, window=<span class="num">10</span>):
+    games_df = games_df.<span class="fn">sort_values</span>(<span class="st">'gameStartTimestamp'</span>, ascending=<span class="kw">False</span>).<span class="fn">reset_index</span>(drop=<span class="kw">True</span>)
+    games_df[<span class="st">'kda'</span>] = (games_df[<span class="st">'kills'</span>] + games_df[<span class="st">'assists'</span>]) / games_df[<span class="st">'deaths'</span>].<span class="fn">clip</span>(lower=<span class="num">1</span>)
+
+    rows = []
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(games_df) - window):
+        w = games_df.<span class="fn">iloc</span>[i:i+window]
+        gaps = games_df[<span class="st">'gameStartTimestamp'</span>].<span class="fn">iloc</span>[i:i+window].<span class="fn">diff</span>().<span class="fn">abs</span>() / <span class="num">60000</span>
+
+        rows.<span class="fn">append</span>({
+            <span class="st">'consecutive_losses'</span>: <span class="fn">consecutive_losses</span>(w[<span class="st">'win'</span>].<span class="fn">tolist</span>()),
+            <span class="st">'kda_slope'</span>:          <span class="fn">slope</span>(w[<span class="st">'kda'</span>].<span class="fn">values</span>),
+            <span class="st">'death_trend'</span>:        <span class="fn">slope</span>(w[<span class="st">'deaths'</span>].<span class="fn">values</span>),
+            <span class="st">'inter_game_mean'</span>:    gaps.<span class="fn">mean</span>(),
+            <span class="st">'inter_game_min'</span>:     gaps.<span class="fn">min</span>(),
+            <span class="st">'champ_variety'</span>:      w[<span class="st">'championId'</span>].<span class="fn">nunique</span>(),
+            <span class="st">'win_rate_window'</span>:    w[<span class="st">'win'</span>].<span class="fn">mean</span>(),
+        })
+    <span class="kw">return</span> rows
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 2 Deliverable</div>
+      <p>Feature extraction script produces one row per sliding window. Running on your own summoner produces sensible values — a 3-loss streak shows <code>consecutive_losses=3</code>, negative <code>kda_slope</code>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day" id="day-3">
+  <div class="day-num-wrap"><div class="day-circle" data-n="3" onclick="toggleDay(3)"></div></div>
+  <div class="day-body" id="body-3">
+    <div class="day-top">
+      <div class="day-title">Tilt Detection — Train + Evaluate Model</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ml">ML</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/training/train_tilt.py</code>. Load the CSV exports, run the feature extraction across all summoners in the dataset, combine into a single DataFrame with a <code>tilt</code> label column. Print the label distribution — expect 5–15% tilt=1 (imbalanced is normal).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Split the data by time — NOT randomly. Find the median <code>gameStartTimestamp</code> in the dataset, use everything before it as training, everything after as test. This prevents temporal data leakage where future games teach the model about past tilt patterns.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Build the sklearn pipeline: <code>Pipeline([('scaler', StandardScaler()), ('clf', XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.05, scale_pos_weight=8, use_label_encoder=False, eval_metric='logloss'))])</code>. The <code>scale_pos_weight=8</code> compensates for class imbalance — tilt events are rare.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Evaluate with <code>roc_auc_score</code> on the held-out test set. Target AUC ≥ 0.68. Also print the confusion matrix and classification report. Don't chase high accuracy — the dataset is imbalanced so a model that always predicts "not tilted" gets 90%+ accuracy but 0.5 AUC. AUC is the correct metric here.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Serialize the trained pipeline: <code>joblib.dump(pipeline, 'ml/models/tilt_v1.pkl')</code>. Also save the feature names list as a JSON file — you'll need it when building the prediction endpoint to ensure features are passed in the correct order.</span></li>
+    </ul>
+    <div class="callout warn">
+      <span class="callout-icon">⚠</span>
+      <p>If your AUC comes back at exactly 0.5 — the model is no better than random. This usually means the tilt label is too rare (less than 3% of windows) or the labeling criteria is too strict. Try relaxing to consecutive_losses ≥ 2 and see if AUC improves.</p>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 3 Deliverable</div>
+      <p>Tilt model trained and saved as <code>tilt_v1.pkl</code>. AUC ≥ 0.65 on held-out test set. Feature names JSON saved alongside the model.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day" id="day-4">
+  <div class="day-num-wrap"><div class="day-circle" data-n="4" onclick="toggleDay(4)"></div></div>
+  <div class="day-body" id="body-4">
+    <div class="day-top">
+      <div class="day-title">SHAP Explanations for Tilt Model</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-ml">ML</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">SHAP (SHapley Additive exPlanations) tells you WHY the model made a prediction — which features pushed the tilt score up or down. This is what makes the prediction feel trustworthy to a user. Without explanations, "You are 73% tilted" is useless. With SHAP: "Your KDA has dropped 3 games in a row and you're queuing faster than usual" is actionable.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">In your prediction function, after getting the tilt probability, compute SHAP values: <code>explainer = shap.TreeExplainer(pipeline.named_steps['clf'])</code>. Pass the scaled features: <code>scaled_X = pipeline.named_steps['scaler'].transform([feature_vector])</code>. Then <code>shap_values = explainer.shap_values(scaled_X)</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Convert SHAP values to human-readable reasons. Map each feature to a plain-English template: <code>consecutive_losses</code> → <code>"You've lost {v} games in a row"</code>, <code>kda_slope</code> → <code>"Your KDA has been {'improving' if v > 0 else 'declining'} recently"</code>, <code>inter_game_min</code> → <code>"You've been queuing very quickly (min gap: {v:.0f} min)"</code>. Return the top 3 SHAP contributors as reason strings.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/features/shap_reasons.py</code> with the <code>top_reasons(shap_vals, feature_names, feature_values, n=3)</code> function. It sorts features by absolute SHAP value, picks the top N, and returns formatted reason strings.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test it manually: take a summoner with 3+ consecutive losses, compute their feature vector, get predictions + SHAP reasons, print them. The reasons should accurately describe their recent game history.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># shap_reasons.py</span>
+<span class="dec">FEATURE_TEMPLATES</span> = {
+    <span class="st">'consecutive_losses'</span>: <span class="kw">lambda</span> v: f<span class="st">"Lost {int(v)} games in a row"</span>,
+    <span class="st">'kda_slope'</span>:          <span class="kw">lambda</span> v: f<span class="st">"KDA {'declining' if v < 0 else 'improving'} ({v:+.2f}/game)"</span>,
+    <span class="st">'death_trend'</span>:        <span class="kw">lambda</span> v: f<span class="st">"Deaths {'rising' if v > 0 else 'falling'} recently"</span>,
+    <span class="st">'inter_game_min'</span>:     <span class="kw">lambda</span> v: f<span class="st">"Queuing very fast (min gap: {v:.0f}m)"</span>,
+    <span class="st">'win_rate_window'</span>:    <span class="kw">lambda</span> v: f<span class="st">"Recent win rate: {v*100:.0f}%"</span>,
+    <span class="st">'champ_variety'</span>:      <span class="kw">lambda</span> v: f<span class="st">"Playing {int(v)} different champions"</span>,
+}
+
+<span class="kw">def</span> <span class="fn">top_reasons</span>(shap_vals, feature_names, feature_values, n=<span class="num">3</span>):
+    pairs = <span class="fn">sorted</span>(
+        <span class="fn">zip</span>(feature_names, shap_vals[<span class="num">0</span>], feature_values),
+        key=<span class="kw">lambda</span> x: <span class="fn">abs</span>(x[<span class="num">1</span>]), reverse=<span class="kw">True</span>
+    )
+    reasons = []
+    <span class="kw">for</span> fname, shap_val, fval <span class="kw">in</span> pairs[:n]:
+        template = <span class="dec">FEATURE_TEMPLATES</span>.<span class="fn">get</span>(fname)
+        <span class="kw">if</span> template: reasons.<span class="fn">append</span>(<span class="fn">template</span>(fval))
+    <span class="kw">return</span> reasons
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 4 Deliverable</div>
+      <p>SHAP explanation generates 3 human-readable reason strings for any tilt prediction. Reasons accurately describe the feature values driving the score.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 5 -->
+<div class="day" id="day-5">
+  <div class="day-num-wrap"><div class="day-circle" data-n="5" onclick="toggleDay(5)"></div></div>
+  <div class="day-body" id="body-5">
+    <div class="day-top">
+      <div class="day-title">Tilt Detection — FastAPI Prediction Endpoint</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/model_registry.py</code>. This module loads all model files on startup and keeps them in memory. Use <code>@lru_cache</code> to load each model only once: <code>def load_tilt_model(): return joblib.load('ml/models/tilt_v1.pkl')</code>. FastAPI will call these on the first prediction request.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/predictors/tilt_predictor.py</code>. The main function <code>predict_tilt(puuid, session)</code>: (1) fetch the player's last 15 games from DB, (2) compute feature vector using <code>compute_tilt_features</code>, (3) load model from registry, (4) call <code>pipeline.predict_proba([features])[0][1]</code> for the tilt probability, (5) compute SHAP reasons, (6) return structured result.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/predict/tilt/{puuid}</code> to <code>backend/api/v1.py</code>. Cache result with TTL 1800s (30 min) — tilt status doesn't change that fast. Return: <code>{ tilt_score: 0.73, tilt_level: "high", reasons: [...], games_analyzed: 10 }</code>. Map score to level: ≥ 0.7 = "high", 0.4–0.7 = "moderate", &lt; 0.4 = "low".</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Handle the edge case: if the player has fewer than 10 games in your DB, return <code>{ tilt_score: null, tilt_level: "insufficient_data", reasons: ["Need at least 10 ranked games to analyze tilt patterns"], games_analyzed: N }</code>. Don't crash — graceful degradation.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the endpoint: <code>curl http://localhost:8000/api/v1/predict/tilt/{puuid}</code>. Verify the response structure is correct. Try it on a summoner you know had a rough recent session — does the score reflect that?</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 5 Deliverable</div>
+      <p>Tilt prediction endpoint returns a score, level, and 3 plain-English reasons. Works for any summoner with 10+ games. Returns graceful fallback for insufficient data.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 2 -->
+<div class="week-header">
+  <span class="week-pill">Week 2</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 6–10 · Draft Win Probability Model</span>
+</div>
+
+<!-- DAY 6 -->
+<div class="day" id="day-6">
+  <div class="day-num-wrap"><div class="day-circle" data-n="6" onclick="toggleDay(6)"></div></div>
+  <div class="day-body" id="body-6">
+    <div class="day-top">
+      <div class="day-title">Draft Model — Feature Engineering</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-data">Data</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/features/draft_features.py</code>. The draft model predicts win probability from the 10 champion picks before a game starts. Key constraint: features must only use information available at draft time — no in-game stats, no items, no actual KDA.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Build a champion tag mapping from Data Dragon. Fetch <code>https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/champion.json</code> and extract the <code>tags</code> field per champion (e.g. Yasuo = ["Fighter", "Assassin"]). Store as a JSON file in <code>ml/data/champion_tags.json</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Define team composition scores. For each team of 5, count how many champions have each tag: <code>ally_fighter_count</code>, <code>ally_mage_count</code>, <code>ally_support_count</code>, <code>ally_marksman_count</code>, <code>ally_tank_count</code>, <code>ally_assassin_count</code>. Do the same for the enemy team. These 12 features encode team composition without one-hot encoding 168+ champions.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add player-specific features: <code>player_games_on_champ</code> (how many ranked games on this champion), <code>player_winrate_on_champ</code> (win rate on this champion), <code>player_kda_on_champ</code> (avg KDA on this champion). These come from your <code>match_participants</code> history. For the training set, compute these at the time of the game — only use games before the current one.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add patch version as a feature. Encode <code>gameVersion</code> as a float: "16.8.764" → 16.8. Champions are stronger/weaker on different patches — including this helps the model account for meta shifts.</span></li>
+    </ul>
+    <div class="callout info">
+      <span class="callout-icon">ℹ</span>
+      <p>The composition tag approach is patch-resilient. One-hot encoding 168 champions means adding a new champion breaks your model. Tag-based scores degrade gracefully — a new champion just gets classified by its tags, same as any other.</p>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 6 Deliverable</div>
+      <p><code>champion_tags.json</code> created. <code>compute_draft_features(game_row, history_df)</code> returns a consistent feature vector. Spot-check: Yasuo should have fighter and assassin scores, not support.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 7 -->
+<div class="day" id="day-7">
+  <div class="day-num-wrap"><div class="day-circle" data-n="7" onclick="toggleDay(7)"></div></div>
+  <div class="day-body" id="body-7">
+    <div class="day-top">
+      <div class="day-title">Draft Model — Build Training Dataset</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-data">Data</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/training/build_draft_dataset.py</code>. For each match in your dataset, reconstruct the 10-champion draft. Each game becomes one training row: the label is whether blue team won (<code>winning_team == 100</code>). The features are the composition scores for both teams plus the player-specific features for the blue team carry.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Handle the temporal lookback correctly: when computing <code>player_winrate_on_champ</code> for a game at timestamp T, only look at that player's games with timestamp &lt; T. This prevents data leakage where future performance teaches the model about past games.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Your dataset will be smaller than the tilt model — one row per match rather than per player per window. With ~800 matches you'll have ~800 rows. This is enough to train but the model will have high variance. Add a note in the code that this improves significantly with 5000+ matches.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Print a data quality summary: total rows, class balance (should be roughly 50/50 win/loss), missing values per column, unique champion counts in the data. Fix any missing values with median imputation — some players will have 0 history on a champion.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Save the dataset: <code>draft_df.to_csv('ml/data/draft_training.csv', index=False)</code>. Verify it has as many rows as you have matches and the correct number of feature columns.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 7 Deliverable</div>
+      <p>Draft training CSV has one row per match with team composition features and player history features. Class balance is close to 50/50. No unexpected nulls.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 8 -->
+<div class="day" id="day-8">
+  <div class="day-num-wrap"><div class="day-circle" data-n="8" onclick="toggleDay(8)"></div></div>
+  <div class="day-body" id="body-8">
+    <div class="day-top">
+      <div class="day-title">Draft Model — Train + Evaluate</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-ml">ML</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/training/train_draft.py</code>. Load the draft CSV. Time-based split: train on first 70% of matches (sorted by timestamp), test on last 30%. This simulates deploying the model after collecting initial data and predicting on future games.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Train an XGBClassifier with: <code>n_estimators=300, max_depth=3, learning_rate=0.05, subsample=0.8, colsample_bytree=0.8</code>. The shallow trees (max_depth=3) prevent overfitting on a small dataset. The subsampling adds regularization.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Evaluate: target AUC ≥ 0.58 on the held-out test set. Anything above 0.55 is genuinely better than random (0.50) for draft prediction — game outcomes have huge inherent randomness that no model can capture. The ceiling for this type of model is around 0.65–0.70 even with perfect features.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Print feature importances: <code>pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(10)</code>. The most important features should be player-specific (winrate on champ, games on champ) — this confirms the model learned that player familiarity matters more than raw champion composition.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Serialize: <code>joblib.dump(model, 'ml/models/draft_v1.pkl')</code>. Also save the exact feature column order as JSON — this is critical. The prediction endpoint must pass features in the exact same order the model was trained on.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 8 Deliverable</div>
+      <p>Draft model saved. AUC ≥ 0.55. Feature importances show player-specific features ranking highly. Feature column order saved as JSON.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 9 -->
+<div class="day" id="day-9">
+  <div class="day-num-wrap"><div class="day-circle" data-n="9" onclick="toggleDay(9)"></div></div>
+  <div class="day-body" id="body-9">
+    <div class="day-top">
+      <div class="day-title">Draft Win Probability — Prediction Endpoint</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add the draft model to <code>model_registry.py</code>: <code>def load_draft_model(): return joblib.load('ml/models/draft_v1.pkl')</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/predictors/draft_predictor.py</code>. The function <code>predict_draft_win(puuid, ally_champion_ids, enemy_champion_ids, player_champion_id, session)</code>: (1) look up the player's history on <code>player_champion_id</code>, (2) compute composition scores for both teams, (3) build the feature vector, (4) load draft model, (5) return win probability.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>POST /api/v1/predict/draft</code> to <code>api/v1.py</code>. Request body: <code>{ puuid, ally_champion_ids: [int×5], enemy_champion_ids: [int×5], player_champion_id: int }</code>. Validate that both arrays have exactly 5 champions and there are no duplicates between teams.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Return: <code>{ win_probability: 0.63, confidence: "moderate", player_champion_games: 15, player_champion_winrate: 58.3, note: "Based on 800 training matches" }</code>. Map probability to confidence: &lt; 0.45 or &gt; 0.75 = "high", 0.45–0.55 = "low", else "moderate". Predictions far from 50% are more reliable.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test with curl: POST a draft with 10 real champion IDs. Verify the win probability is between 0.3 and 0.7 for a balanced draft. Try submitting a clearly one-sided draft (all meta picks vs all off-meta) — the probability should shift meaningfully.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 9 Deliverable</div>
+      <p>Draft prediction endpoint accepts 10 champion IDs and returns a win probability. Balanced draft returns ~50%, clearly one-sided draft returns 60%+.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 10 -->
+<div class="day" id="day-10">
+  <div class="day-num-wrap"><div class="day-circle" data-n="10" onclick="toggleDay(10)"></div></div>
+  <div class="day-body" id="body-10">
+    <div class="day-top">
+      <div class="day-title">Tilt Score UI — Profile Page Banner</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>getTiltPrediction(puuid)</code> to <code>api.ts</code>. Interface: <code>{ tilt_score: number | null, tilt_level: string, reasons: string[], games_analyzed: number }</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/ml/TiltBanner.tsx</code>. This is a client component that fetches the tilt prediction for the current summoner and renders a banner below the stats overview cards. Only show the banner when <code>tilt_level</code> is "high" or "moderate" — don't show it when the player is fine.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Banner design for "high" tilt: red/amber border, warning icon, large tilt score gauge (0–100), and below it the 3 SHAP reason strings as bullet points. Suggested message: <em>"Consider taking a break — your recent performance suggests tilt."</em></span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Banner design for "moderate": yellow/dim border, smaller — just the score and top reason. More of a heads-up than a warning.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>TiltBanner</code> to the profile page in <code>page.tsx</code>, between the stats overview cards and the tab bar. It should load independently (its own React Query call) so it doesn't block the rest of the page from rendering.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// TiltBanner.tsx — score gauge using a simple CSS arc</span>
+<span class="kw">function</span> <span class="fn">TiltGauge</span>({ score }: { score: number }) {
+  <span class="kw">const</span> color = score >= <span class="num">70</span> ? <span class="st">'#E8523C'</span> : score >= <span class="num">40</span> ? <span class="st">'#C89B3C'</span> : <span class="st">'#4CAF72'</span>
+  <span class="kw">return</span> (
+    &lt;div className=<span class="st">"flex items-center gap-3"</span>&gt;
+      &lt;div className=<span class="st">"text-3xl font-bold font-mono"</span>
+           style={{ color }}&gt;
+        {Math.<span class="fn">round</span>(score)}
+      &lt;/div&gt;
+      &lt;div className=<span class="st">"flex-1 h-2 bg-surface2 rounded-full overflow-hidden"</span>&gt;
+        &lt;div className=<span class="st">"h-full rounded-full transition-all"</span>
+             style={{ width: `${score}%`, background: color }} /&gt;
+      &lt;/div&gt;
+      &lt;span className=<span class="st">"text-dim text-xs font-mono"</span>&gt;/ 100&lt;/span&gt;
+    &lt;/div&gt;
+  )
+}
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 10 Deliverable</div>
+      <p>Tilt banner visible on the profile page for summoners with high/moderate tilt. Score, gauge, and 3 reasons render correctly. Low-tilt summoners see no banner.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 3 -->
+<div class="week-header">
+  <span class="week-pill">Week 3</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 11–14 · Draft Analyzer UI + Wrap-Up</span>
+</div>
+
+<!-- DAY 11 -->
+<div class="day" id="day-11">
+  <div class="day-num-wrap"><div class="day-circle" data-n="11" onclick="toggleDay(11)"></div></div>
+  <div class="day-body" id="body-11">
+    <div class="day-top">
+      <div class="day-title">Draft Analyzer Page — Champion Picker UI</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/app/draft/page.tsx</code>. This is a standalone page (not inside the summoner profile) — navigate to it via <code>/draft?puuid={puuid}</code>. It's the Draft Analyzer: a tool where you input the 10 draft picks and see the predicted win probability update in real time.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a link to the Draft Analyzer in the Navbar: <code>Draft</code> text link next to the GitHub link. When clicked, if there's a current summoner in localStorage (save it there when navigating to a profile), pre-fill the <code>puuid</code> query param.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">UI layout: two columns side by side — Blue Team (left, 5 slots) and Red Team (right, 5 slots). Each slot is a champion search box. Above the blue team: a "Your Champion" highlighted slot showing which position is the player's. Win probability gauge in the center between the two teams, updating as champions are filled in.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Champion search: a text input that filters champions by name as you type (client-side filter from the DDragon data). When you click a champion from the dropdown, it fills that slot and triggers a recalculation of win probability if at least 5 champions are entered.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Win probability only shows once all 10 slots are filled. While fewer than 10 are selected, show a prompt: <code>"Fill all 10 picks to see win probability"</code>. When all 10 are filled, call the draft prediction endpoint and show the result.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 11 Deliverable</div>
+      <p>Draft analyzer page loads at <code>/draft</code>. Champion search works in each slot. After filling all 10 picks the win probability gauge appears.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 12 -->
+<div class="day" id="day-12">
+  <div class="day-num-wrap"><div class="day-circle" data-n="12" onclick="toggleDay(12)"></div></div>
+  <div class="day-body" id="body-12">
+    <div class="day-top">
+      <div class="day-title">Draft Analyzer — Win Probability Display</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/ml/DraftProbabilityGauge.tsx</code>. A visual gauge showing the win probability as a horizontal bar from 0% (left, red) to 100% (right, green) with the current probability marker. The center line at 50% is the baseline. Show the probability as a large percentage number.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add an animated transition when the probability updates — use CSS <code>transition: width 0.5s ease</code> on the fill bar. As champions are swapped, the bar should smoothly animate to the new value. This makes the tool feel responsive.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Show context below the gauge: <code>"Based on {N} training matches"</code>, confidence level, and the player's record on their champion (<code>"You are 15-8 on this champion"</code>). This grounds the prediction in real data the user can verify.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a "Reset" button that clears all 10 champion slots. Add a "Random Draft" button that fills in 10 random champions from the pool — useful for testing and demos.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Handle the model disclaimer: add a small footnote <code>"Predictions are based on historical data and have inherent uncertainty. This is a tool for insight, not a guarantee."</code> — important for setting expectations.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 12 Deliverable</div>
+      <p>Win probability gauge animates smoothly as champions change. Context text shows training data size and player's champion record. Reset and Random buttons work.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 13 -->
+<div class="day" id="day-13">
+  <div class="day-num-wrap"><div class="day-circle" data-n="13" onclick="toggleDay(13)"></div></div>
+  <div class="day-body" id="body-13">
+    <div class="day-top">
+      <div class="day-title">Model Retraining Pipeline + Version Management</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-code">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ml/retrain.py</code> — a single script that re-exports data, retrains both models, evaluates them, and saves new .pkl files only if the new AUC is better than the previous version. Run this manually whenever you want to update models with new data.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add model metadata: alongside each .pkl file, save a <code>tilt_v1_meta.json</code> with: <code>{ trained_at, training_samples, test_auc, feature_names, model_version }</code>. This lets you track model quality over time without opening the pkl file.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/ml/status</code> endpoint. Returns: which models are loaded, their training date, AUC, and sample count. This is your ops dashboard for model health. Return 503 if any model file is missing.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a Celery Beat task <code>retrain_models_weekly</code> that runs every Sunday at 2am UTC: exports data, retrains both models, logs the new AUC. Only update the model files if AUC improved by ≥ 0.01. This keeps models fresh as you collect more match data.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the full retrain pipeline end to end: run <code>python -m ml.retrain</code> from the backend directory. Both models should retrain, print their AUC, and save new pkl files. Takes 1–2 minutes on your dataset size.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 13 Deliverable</div>
+      <p><code>python -m ml.retrain</code> retrains both models and saves metadata. <code>/api/v1/ml/status</code> returns model info. Weekly Beat task scheduled.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 14 -->
+<div class="day" id="day-14">
+  <div class="day-num-wrap"><div class="day-circle" data-n="14" onclick="toggleDay(14)"></div></div>
+  <div class="day-body" id="body-14">
+    <div class="day-top">
+      <div class="day-title">Phase 5 Wrap-Up + Phase 6 Prep</div>
+      <div class="day-meta"><span class="time-pill">~1 hr</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Full end-to-end ML test: navigate to a summoner with a recent loss streak → verify tilt banner appears with a high score and accurate reasons. Navigate to a summoner who's been winning → verify no banner or low score.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the draft analyzer: go to <code>/draft</code>, fill in 10 champions, verify win probability appears. Swap out a meta pick for an off-meta pick — probability should shift by 2–5%. Swap player champion to one they've never played — probability should drop.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Verify <code>/api/v1/ml/status</code> returns healthy status with correct model metadata. Verify the weekly retrain Beat task shows in the beat schedule logs.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Commit and tag: <code>git add -A && git commit -m "feat: phase 5 complete — tilt detection + draft win probability ML models"</code> then <code>git tag v0.5-phase5-complete</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Phase 6 preview: you'll write a proper Dockerfile (non-root user, multi-stage build), configure Railway for the backend + Celery, Vercel for Next.js, and apply for a Production Riot API key. Skim the Railway docs for PostgreSQL + TimescaleDB extension support and the Vercel docs for environment variable management.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Phase 5 Complete</div>
+      <p>Two trained ML models served in production via FastAPI. Tilt detection with SHAP explanations visible on the profile page. Draft win probability available in the standalone draft analyzer. Weekly automated retraining scheduled.</p>
+    </div>
+  </div>
+</div>
+
+<footer>Phase 5 of 6 — League of Legends Analytics Dashboard · Click any day circle to mark complete</footer>
+
+<script>
+  const STORAGE_KEY = 'lol_phase5_progress';
+  function loadState(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return{}}}
+  function saveState(s){localStorage.setItem(STORAGE_KEY,JSON.stringify(s))}
+  let state = loadState();
+  function toggleDay(n){state[`day_${n}`]=!state[`day_${n}`];saveState(state);renderDay(n);updateStats();}
+  function toggleTask(li){li.classList.toggle('checked');updateStats();}
+  function renderDay(n){
+    const c=document.querySelector(`#day-${n} .day-circle`);
+    const b=document.getElementById(`body-${n}`);
+    const done=!!state[`day_${n}`];
+    c.classList.toggle('done',done);b.classList.toggle('done',done);
+  }
+  function updateStats(){
+    const total=14;
+    const done=Object.values(state).filter(Boolean).length;
+    const tasksDone=document.querySelectorAll('.tasks li.checked').length;
+    document.getElementById('pct-label').textContent=`${done} / ${total} days complete`;
+    document.getElementById('progress-fill').style.width=`${(done/total)*100}%`;
+    document.getElementById('tasks-done').textContent=tasksDone;
+    const end=new Date();end.setDate(end.getDate()+(total-done));
+    document.getElementById('end-date').textContent=end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  for(let i=1;i<=14;i++)renderDay(i);
+  updateStats();
+</script>
+</body>
+</html>

@@ -73,7 +73,10 @@ class MatchParticipant(Base):
     championId: Mapped[int] = mapped_column(Integer, nullable=False)
     teamId: Mapped[int] = mapped_column(Integer, nullable=False)
     individualPosition: Mapped[str] = mapped_column(String(32), nullable=False)
+    teamPosition: Mapped[str | None] = mapped_column(String(32), nullable=True)
     win: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    summoner1Id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    summoner2Id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     challenges: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     perks: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 

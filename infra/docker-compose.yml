@@ -51,7 +51,7 @@ services:
       [
         "sh",
         "-c",
-        "pip install --no-cache-dir -r requirements.txt && celery -A worker.celery_app flower --port=5555 --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}",
+        "pip install --no-cache-dir -r requirements-flower.txt && celery -A worker.celery_app flower --port=5555 --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}",
       ]
 
   adminer:

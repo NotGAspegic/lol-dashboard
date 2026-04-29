@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSummoner, getStatsOverview } from "@/lib/api";
+import TiltBanner from "@/components/ml/TiltBanner";
+import CurrentSummonerTracker from "@/components/profile/CurrentSummonerTracker";
 import StatsOverviewCards from "@/components/profile/StatsOverviewCards";
 import RefreshButton from "@/components/profile/RefreshButton";
 import Tabs from "@/components/profile/Tabs";
@@ -32,6 +34,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <CurrentSummonerTracker puuid={puuid} />
+
       {/* Profile header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -61,6 +65,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
       {/* Stats overview */}
       <StatsOverviewCards stats={statsData} />
+
+      <TiltBanner puuid={puuid} />
 
       <Tabs puuid={puuid} />
     </div>

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 4 — Daily Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500&display=swap');
+  :root {
+    --gold:#C89B3C;--gold-light:#F0E6C8;--gold-dim:#7A5C1E;
+    --bg:#0A0C10;--bg2:#111318;--bg3:#181C24;
+    --border:rgba(200,155,60,.15);--border-bright:rgba(200,155,60,.4);
+    --text:#C8C0B0;--text-dim:#5A5650;--text-bright:#F0E6C8;
+    --blue:#4A9EFF;--teal:#2ABFAA;--red:#E8523C;--purple:#9B72CF;--green:#4CAF72;--amber:#F0A830;
+    --r:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;max-width:860px;margin:0 auto;padding:40px 28px 80px;}
+
+  .hdr{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px;}
+  .hdr-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(200,155,60,.08);border:1px solid var(--border-bright);padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:14px;}
+  h1{font-family:'Syne',sans-serif;font-size:clamp(22px,4vw,36px);font-weight:800;color:var(--gold-light);letter-spacing:-.02em;line-height:1.15;margin-bottom:10px;}
+  h1 span{color:var(--gold);}
+  .hdr p{color:var(--text-dim);font-size:13px;max-width:600px;}
+
+  .phase-chain{display:flex;gap:0;margin:22px 0 0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+  .chain-item{flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border);font-family:'DM Mono',monospace;}
+  .chain-item:last-child{border-right:none;}
+  .chain-item .cn{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:3px;}
+  .chain-item .cv{font-size:12px;font-weight:500;color:var(--text-bright);}
+  .chain-item.active{background:rgba(200,155,60,.06);}
+  .chain-item.active .cv{color:var(--gold);}
+  .chain-item.done .cv{color:var(--green);}
+
+  .progress-wrap{margin:20px 0 0;}
+  .progress-label{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+  .progress-label span:last-child{color:var(--gold);}
+  .progress-track{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width .4s ease;width:0%;}
+
+  .stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;flex:1;min-width:120px;}
+  .stat .slabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:4px;}
+  .stat .sval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--gold);}
+  .stat .sval.blue{color:var(--blue);}.stat .sval.green{color:var(--green);}
+
+  .week-header{display:flex;align-items:center;gap:12px;margin:28px 0 14px;}
+  .week-pill{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:20px;border:1px solid var(--border-bright);color:var(--gold);background:rgba(200,155,60,.06);flex-shrink:0;}
+  .week-line{flex:1;height:1px;background:var(--border);}
+  .week-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);flex-shrink:0;}
+
+  .day{display:grid;grid-template-columns:56px 1fr;gap:0 16px;margin-bottom:10px;position:relative;}
+  .day:not(:last-of-type)::after{content:'';position:absolute;left:27px;top:52px;bottom:-10px;width:2px;background:var(--border);z-index:0;}
+  .day-num-wrap{display:flex;flex-direction:column;align-items:center;padding-top:2px;position:relative;z-index:1;}
+  .day-circle{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gold-dim);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);transition:all .2s;cursor:pointer;flex-shrink:0;}
+  .day-circle.done{background:rgba(200,155,60,.15);border-color:var(--gold);color:var(--gold-light);}
+  .day-circle.done::after{content:'✓';}.day-circle:not(.done)::after{content:attr(data-n);}
+
+  .day-body{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px 16px;transition:border-color .2s;}
+  .day-body:hover{border-color:rgba(200,155,60,.3);}
+  .day-body.done{opacity:.55;}
+
+  .day-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+  .day-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright);line-height:1.3;}
+  .day-meta{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+
+  .time-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);white-space:nowrap;}
+  .focus-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid;white-space:nowrap;}
+  .fp-setup{border-color:rgba(42,191,170,.3);color:var(--teal);background:rgba(42,191,170,.06);}
+  .fp-code{border-color:rgba(155,114,207,.3);color:var(--purple);background:rgba(155,114,207,.06);}
+  .fp-ui{border-color:rgba(200,155,60,.3);color:var(--gold);background:rgba(200,155,60,.06);}
+  .fp-test{border-color:rgba(232,82,60,.3);color:var(--red);background:rgba(232,82,60,.06);}
+  .fp-chart{border-color:rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);}
+  .fp-db{border-color:rgba(76,175,114,.3);color:var(--green);background:rgba(76,175,114,.06);}
+
+  .tasks{list-style:none;padding:0;margin:0;}
+  .tasks li{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px solid rgba(200,155,60,.05);cursor:pointer;border-radius:4px;transition:background .15s;}
+  .tasks li:last-child{border-bottom:none;}
+  .tasks li:hover{background:rgba(200,155,60,.04);}
+  .task-check{width:16px;height:16px;border:1.5px solid var(--text-dim);border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:10px;}
+  .tasks li.checked .task-check{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+  .tasks li.checked .task-check::after{content:'✓';font-weight:700;}
+  .task-text{font-size:13px;color:var(--text);line-height:1.55;}
+  .tasks li.checked .task-text{text-decoration:line-through;color:var(--text-dim);}
+
+  .deliverable{margin-top:12px;padding:10px 14px;background:var(--bg3);border-left:2px solid var(--gold-dim);border-radius:0 4px 4px 0;font-size:12px;}
+  .deliverable .dlabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:2px;}
+  .deliverable p{color:var(--text-dim);font-size:12px;margin:0;}
+
+  .snippet{margin-top:12px;background:#0D1117;border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:#C9D1D9;overflow-x:auto;}
+  .snippet .fn{color:#D2A8FF;}.snippet .kw{color:#FF7B72;}.snippet .st{color:#A5D6FF;}.snippet .cm{color:#6E7681;}.snippet .dec{color:#56D364;}.snippet .num{color:#79C0FF;}.snippet .cl{color:#FFA657;}
+
+  .callout{display:flex;gap:12px;padding:12px 16px;border-radius:var(--r);margin:12px 0;border:1px solid;font-size:13px;}
+  .callout.warn{background:rgba(200,155,60,.06);border-color:var(--border-bright);color:var(--gold);}
+  .callout.info{background:rgba(74,158,255,.06);border-color:rgba(74,158,255,.25);color:#7BB8FF;}
+  .callout.tip{background:rgba(76,175,114,.06);border-color:rgba(76,175,114,.25);color:#7EC89A;}
+  .callout-icon{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;flex-shrink:0;padding-top:1px;}
+  .callout p{margin:0;color:inherit;font-size:13px;}
+
+  footer{margin-top:48px;border-top:1px solid var(--border);padding-top:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-tag">◆ Phase 4 of 6 — Advanced Analytics</div>
+  <h1>Deep Match Analysis &<br><span>Advanced Insights</span></h1>
+  <p>14 evenings @ 1–2 hrs each. Goal: go beyond KDA — gold curves from timeline data, vision impact analysis, damage efficiency scatter, champion matchup matrix, and a playstyle fingerprint radar. All powered by your TimescaleDB hypertable.</p>
+
+  <div class="phase-chain">
+    <div class="chain-item done"><div class="cn">Phase 1</div><div class="cv">✓ Foundation</div></div>
+    <div class="chain-item done"><div class="cn">Phase 2</div><div class="cv">✓ Pipeline</div></div>
+    <div class="chain-item done"><div class="cn">Phase 3</div><div class="cv">✓ Dashboard</div></div>
+    <div class="chain-item active"><div class="cn">Phase 4</div><div class="cv">→ Analytics</div></div>
+    <div class="chain-item"><div class="cn">Phase 5</div><div class="cv">ML Models</div></div>
+    <div class="chain-item"><div class="cn">Phase 6</div><div class="cv">Deploy</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Progress</span><span id="pct-label">0 / 14 days complete</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="slabel">Total Days</div><div class="sval">14</div></div>
+  <div class="stat"><div class="slabel">Est. Hours</div><div class="sval blue">21–28 hrs</div></div>
+  <div class="stat"><div class="slabel">Tasks Done</div><div class="sval green" id="tasks-done">0</div></div>
+  <div class="stat"><div class="slabel">Phase End</div><div class="sval" style="font-size:14px;padding-top:3px" id="end-date">—</div></div>
+</div>
+
+
+<!-- WEEK 1 -->
+<div class="week-header">
+  <span class="week-pill">Week 1</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 1–5 · Timeline Data + Gold Curves</span>
+</div>
+
+<!-- DAY 1 -->
+<div class="day" id="day-1">
+  <div class="day-num-wrap"><div class="day-circle" data-n="1" onclick="toggleDay(1)"></div></div>
+  <div class="day-body" id="body-1">
+    <div class="day-top">
+      <div class="day-title">TimescaleDB Gold Curve Endpoint</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-db">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Verify your <code>match_timeline_frames</code> hypertable has data. Run: <code>SELECT COUNT(*), MIN(minute), MAX(minute) FROM match_timeline_frames;</code> — you should see tens of thousands of rows spanning minutes 0–50+.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/gold-curves</code> to <code>backend/api/v1.py</code>. Accept optional query param <code>champion_id</code>. Returns average gold per minute for the player across all their games (filtered by champion if provided), and a position average for comparison.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">The query: join <code>match_timeline_frames</code> + <code>match_participants</code> on <code>match_id + participant_id</code>. Filter by <code>puuid</code>. Group by <code>minute</code>. Aggregate: <code>AVG(total_gold)</code> per minute. Order by minute ASC. This gives you a smooth average gold curve across all games.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">The tricky part: <code>match_timeline_frames</code> uses <code>match_id</code> (integer gameId) and <code>participant_id</code> (1–10), but <code>match_participants</code> has <code>puuid</code>. You need to join on <code>match_id = gameId</code> AND find which <code>participant_id</code> corresponds to the puuid in each match. Query <code>match_participants</code> first to get a <code>(gameId, participant_id)</code> mapping, then use it in the timeline query.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Return format: <code>[{ minute: 0, avg_gold: 500 }, { minute: 1, avg_gold: 620 }, ...]</code>. Cap at minute 35 — games beyond that are rare and skew the average. Filter out remake matches (<code>gameDuration &lt; 300</code>).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test with curl: <code>curl "http://localhost:8000/api/v1/summoners/{puuid}/gold-curves"</code>. You should get ~35 data points. Verify minute 0 is ~500 gold and minute 10 is ~3000–4000 gold — those are realistic values.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># gold curves query — join timeline to participants</span>
+<span class="kw">from</span> sqlalchemy <span class="kw">import</span> text
+
+<span class="cm"># step 1: get (gameId, participant_id) pairs for this puuid</span>
+mapping = <span class="kw">await</span> session.<span class="fn">execute</span>(
+    <span class="fn">select</span>(
+        MatchParticipant.gameId,
+        MatchParticipant.id.label(<span class="st">'row_id'</span>),
+    )
+    .<span class="fn">where</span>(MatchParticipant.puuid == puuid)
+    .<span class="fn">join</span>(Match, Match.gameId == MatchParticipant.gameId)
+    .<span class="fn">where</span>(Match.gameDuration >= <span class="num">300</span>)
+)
+
+<span class="cm"># step 2: aggregate gold by minute from timeline frames</span>
+<span class="cm"># participant_id in frames = position (1-10), need to match by game</span>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 1 Deliverable</div>
+      <p>Curl returns ~35 data points with realistic gold values. Minute 0 ≈ 500, minute 10 ≈ 3500, minute 25 ≈ 8000+.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 2 -->
+<div class="day" id="day-2">
+  <div class="day-num-wrap"><div class="day-circle" data-n="2" onclick="toggleDay(2)"></div></div>
+  <div class="day-body" id="body-2">
+    <div class="day-top">
+      <div class="day-title">Gold Curve Area Chart — Recharts</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>getGoldCurves(puuid, championId?)</code> to <code>frontend/src/lib/api.ts</code>. TypeScript interface: <code>{ minute: number; avg_gold: number }[]</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/GoldCurveChart.tsx</code>. Use Recharts <code>AreaChart</code> — not <code>LineChart</code>. The area fill gives a sense of gold accumulation over time. Use <code>ResponsiveContainer width="100%" height={260}</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Style: area fill <code>fill="rgba(30,155,232,0.15)"</code>, stroke <code>"#1E9BE8"</code>, strokeWidth 2. X-axis: minute label (e.g. "10m"). Y-axis: format as "5.2k" for thousands. Grid lines in <code>rgba(30,155,232,0.08)</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a champion filter above the chart — a dropdown of champions the player has played. When selected, refetch with <code>champion_id</code> param. When "All Champions" selected, fetch without it. Use React Query with the champion_id as part of the query key so switching champions triggers a new fetch.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Custom tooltip: on hover show <code>"Minute {X}: avg {Y} gold"</code>. Format gold as "4,250" with commas. Simple — no champion icon needed here.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add this chart to a new "Timeline" tab in the profile page <code>Tabs.tsx</code>. This becomes the 4th tab: Overview / Champions / Performance / Timeline.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// gold curve area chart</span>
+<span class="tag">&lt;AreaChart</span> <span class="attr">data</span>={data} <span class="attr">margin</span>={{ top: <span class="num">8</span>, right: <span class="num">8</span>, left: <span class="num">0</span>, bottom: <span class="num">0</span> }}<span class="tag">&gt;</span>
+  <span class="tag">&lt;defs&gt;</span>
+    <span class="tag">&lt;linearGradient</span> <span class="attr">id</span>=<span class="st">"goldGradient"</span> <span class="attr">x1</span>=<span class="st">"0"</span> <span class="attr">y1</span>=<span class="st">"0"</span> <span class="attr">x2</span>=<span class="st">"0"</span> <span class="attr">y2</span>=<span class="st">"1"</span><span class="tag">&gt;</span>
+      <span class="tag">&lt;stop</span> <span class="attr">offset</span>=<span class="st">"5%"</span> <span class="attr">stopColor</span>=<span class="st">"#1E9BE8"</span> <span class="attr">stopOpacity</span>={<span class="num">0.3</span>}<span class="tag">/&gt;</span>
+      <span class="tag">&lt;stop</span> <span class="attr">offset</span>=<span class="st">"95%"</span> <span class="attr">stopColor</span>=<span class="st">"#1E9BE8"</span> <span class="attr">stopOpacity</span>={<span class="num">0</span>}<span class="tag">/&gt;</span>
+    <span class="tag">&lt;/linearGradient&gt;</span>
+  <span class="tag">&lt;/defs&gt;</span>
+  <span class="tag">&lt;Area</span>
+    <span class="attr">dataKey</span>=<span class="st">"avg_gold"</span>
+    <span class="attr">stroke</span>=<span class="st">"#1E9BE8"</span>
+    <span class="attr">strokeWidth</span>={<span class="num">2</span>}
+    <span class="attr">fill</span>=<span class="st">"url(#goldGradient)"</span>
+  <span class="tag">/&gt;</span>
+<span class="tag">&lt;/AreaChart&gt;</span>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 2 Deliverable</div>
+      <p>Gold curve area chart in the Timeline tab. Champion dropdown switches between all-champion average and per-champion curve. Tooltip shows formatted gold value on hover.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day" id="day-3">
+  <div class="day-num-wrap"><div class="day-circle" data-n="3" onclick="toggleDay(3)"></div></div>
+  <div class="day-body" id="body-3">
+    <div class="day-top">
+      <div class="day-title">Gold Curve — Brushable Time Range</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a Recharts <code>Brush</code> component to the gold curve chart. The Brush renders a mini timeline below the main chart that the user can drag to zoom into a specific minute range (e.g. minutes 10–20 = the laning phase). Import <code>Brush</code> from recharts.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Configure the Brush: <code>dataKey="minute"</code>, <code>height={20}</code>, <code>stroke="rgba(30,155,232,0.3)"</code>, <code>fill="rgba(10,22,40,0.8)"</code>. Set <code>startIndex={0}</code> and <code>endIndex={data.length - 1}</code> as defaults so the full range is selected on load.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add three quick-select buttons above the chart: <strong>Early Game</strong> (min 0–14), <strong>Mid Game</strong> (min 15–24), <strong>Late Game</strong> (min 25+). Clicking a button programmatically sets the Brush's <code>startIndex</code> and <code>endIndex</code> via state — this requires making the Brush a controlled component.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a phase annotation overlay: draw a faint vertical region between minutes 0–14 labeled "Early", 15–24 labeled "Mid", 25+ labeled "Late" using Recharts <code>ReferenceArea</code>. This gives context for what the gold values mean at each phase.</span></li>
+    </ul>
+    <div class="callout tip">
+      <span class="callout-icon">✦</span>
+      <p>The Brush component is the key differentiator that makes this chart feel professional. Most stat sites show a static gold curve — the brushable zoom makes yours interactive and genuinely more insightful for analyzing specific phases of the game.</p>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 3 Deliverable</div>
+      <p>Gold curve with draggable brush for zooming. Early/Mid/Late game quick-select buttons. Phase annotation areas visible on the chart.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day" id="day-4">
+  <div class="day-num-wrap"><div class="day-circle" data-n="4" onclick="toggleDay(4)"></div></div>
+  <div class="day-body" id="body-4">
+    <div class="day-top">
+      <div class="day-title">Vision Score Impact Endpoint + Chart</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-db">Backend + Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/vision-impact</code>. Query: group all games by vision score quartile (Q1: 0–25th percentile, Q2: 25–50th, Q3: 50–75th, Q4: 75–100th). For each quartile, return: <code>quartile</code>, <code>avg_vision_score</code>, <code>win_rate</code>, <code>game_count</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">To calculate quartiles in PostgreSQL: use <code>NTILE(4) OVER (ORDER BY visionScore)</code> as a window function inside a subquery. The outer query groups by the NTILE bucket and aggregates win rate. This is pure SQL — no Python post-processing needed.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/VisionImpactChart.tsx</code>. Use a Recharts <code>BarChart</code> with 4 bars — one per quartile. X-axis: quartile label ("Low Vision", "Below Avg", "Above Avg", "High Vision"). Y-axis: win rate %. Color bars by win rate using the same green/yellow/red thresholds as the champion table.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a data label inside each bar showing the average vision score for that quartile: e.g. "avg: 24". Use Recharts <code>LabelList</code> with <code>position="insideTop"</code>. This immediately tells the user what vision score they need to be in each bucket.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add this chart to the Timeline tab alongside the gold curve. Layout: gold curve on top (full width), vision impact chart below (full width). Both charts live in the same tab.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># vision impact query — NTILE window function</span>
+vision_sql = <span class="fn">text</span>(<span class="st">"""
+  WITH quartiled AS (
+    SELECT
+      win,
+      "visionScore",
+      NTILE(4) OVER (ORDER BY "visionScore") AS quartile
+    FROM match_participants
+    WHERE puuid = :puuid
+  )
+  SELECT
+    quartile,
+    ROUND(AVG("visionScore")::numeric, 1) AS avg_vision,
+    ROUND(AVG(CASE WHEN win THEN 1.0 ELSE 0.0 END) * 100, 1) AS win_rate,
+    COUNT(*) AS game_count
+  FROM quartiled
+  GROUP BY quartile
+  ORDER BY quartile
+"""</span>)
+result = <span class="kw">await</span> session.<span class="fn">execute</span>(vision_sql, {<span class="st">"puuid"</span>: puuid})
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 4 Deliverable</div>
+      <p>Vision impact bar chart showing win rate by vision score quartile. High vision quartile should show noticeably higher win rate than the low vision quartile for most players.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 5 -->
+<div class="day" id="day-5">
+  <div class="day-num-wrap"><div class="day-circle" data-n="5" onclick="toggleDay(5)"></div></div>
+  <div class="day-body" id="body-5">
+    <div class="day-top">
+      <div class="day-title">Damage Efficiency Deep Dive Endpoint</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-db">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/damage-efficiency</code>. This is more detailed than the Phase 3 scatter — it groups games into efficiency buckets and returns aggregate stats per bucket. Buckets: high damage share + won, high damage share + lost, low damage share + won, low damage share + lost.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Calculate <code>damage_share</code> from the <code>challenges</code> JSONB column (you stored it there during Phase 1). Define "high damage share" as above the player's personal median damage share. This makes it relative — a support's high damage share is different from a mid laner's.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Also return per-game data points (same as the Phase 3 scatter) but add <code>gold_share</code> computed as <code>goldEarned / team_total_gold</code>. You need to compute team totals — join all participants from the same match and same teamId, sum their gold, then compute the ratio. Store these as <code>game_damage_share</code> and <code>game_gold_share</code> per data point.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Cache this endpoint with TTL 300s. Add cache key <code>damage_efficiency:{puuid}</code> to the refresh invalidation list in <code>refresh_summoner</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the endpoint. Verify: <code>game_damage_share + game_gold_share</code> values are both between 0 and 1. Games where damage share greatly exceeds gold share indicate efficient carry performance (doing more damage than your resources suggest).</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 5 Deliverable</div>
+      <p>Damage efficiency endpoint returning per-game data with both damage share and gold share. Curl confirms values are between 0–1 and the ratio varies across games.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 2 -->
+<div class="week-header">
+  <span class="week-pill">Week 2</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 6–10 · Matchup Matrix + Playstyle Radar</span>
+</div>
+
+<!-- DAY 6 -->
+<div class="day" id="day-6">
+  <div class="day-num-wrap"><div class="day-circle" data-n="6" onclick="toggleDay(6)"></div></div>
+  <div class="day-body" id="body-6">
+    <div class="day-top">
+      <div class="day-title">Damage vs Gold Efficiency Chart</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/DamageGoldChart.tsx</code>. This replaces the Phase 3 performance scatter with a more insightful version. X-axis: gold share (0–50%). Y-axis: damage share (0–50%). Each dot = one game. Color = win/loss.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Draw a diagonal reference line from (0,0) to (50%,50%) — this is the "efficiency line". Dots above this line did more damage than their gold share suggests (efficient). Dots below did less damage than expected (gold-inefficient).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add an "Efficiency Score" summary above the chart: calculate the percentage of games where the player is above the efficiency line. Display as: <code>"Efficient in 68% of games"</code>. Color code: green ≥ 60%, yellow 45–60%, red &lt; 45%.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add quadrant labels: top-left = "Efficient (Low Resources)", top-right = "Dominant", bottom-left = "Underperforming", bottom-right = "Resource-Heavy Low Output". These tell the user what each region means without needing to understand the axes.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add this chart to the Timeline tab below vision impact. The Timeline tab now has: gold curve (top) → vision impact (middle) → damage vs gold efficiency (bottom).</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 6 Deliverable</div>
+      <p>Damage vs gold efficiency scatter with diagonal reference line, quadrant labels, and efficiency score summary. Timeline tab has all three analytics charts stacked.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 7 -->
+<div class="day" id="day-7">
+  <div class="day-num-wrap"><div class="day-circle" data-n="7" onclick="toggleDay(7)"></div></div>
+  <div class="day-body" id="body-7">
+    <div class="day-top">
+      <div class="day-title">Champion Matchup Data — Backend</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-db">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/matchups</code>. This is the hardest query in Phase 4. Goal: for each game, find which champion was in the same position on the opposite team (the lane opponent). Return win rate against each enemy champion with ≥ 3 encounters.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Finding the lane opponent: for a given game and player position (e.g. JUNGLE), find participants where <code>gameId = same game</code> AND <code>individualPosition = same position</code> AND <code>teamId != player's teamId</code>. That participant's <code>championId</code> is the matchup champion.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write this as a self-join on <code>match_participants</code>: alias the table twice — <code>mp_player</code> (filtered by puuid) and <code>mp_enemy</code> (same gameId, same position, different team). Join on <code>mp_player.gameId = mp_enemy.gameId AND mp_player.individualPosition = mp_enemy.individualPosition AND mp_player.teamId != mp_enemy.teamId</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Aggregate: group by <code>mp_enemy.championId</code>. Return: <code>enemy_champion_id</code>, <code>games</code>, <code>wins</code>, <code>win_rate</code>, <code>avg_kda_in_matchup</code>. Filter to ≥ 3 games. Order by games DESC.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the endpoint. Verify results make sense — if you main Naafiri jungle you should see Vi, Lee Sin, Jarvan etc. as frequent opponents. Win rates should vary — you likely perform differently against different junglers.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># matchup self-join query</span>
+mp_player = <span class="fn">aliased</span>(MatchParticipant, name=<span class="st">"mp_player"</span>)
+mp_enemy  = <span class="fn">aliased</span>(MatchParticipant, name=<span class="st">"mp_enemy"</span>)
+
+result = <span class="kw">await</span> session.<span class="fn">execute</span>(
+    <span class="fn">select</span>(
+        mp_enemy.championId.<span class="fn">label</span>(<span class="st">"enemy_champion_id"</span>),
+        func.<span class="fn">count</span>().<span class="fn">label</span>(<span class="st">"games"</span>),
+        func.<span class="fn">sum</span>(<span class="fn">case</span>((mp_player.win, <span class="num">1</span>), else_=<span class="num">0</span>)).<span class="fn">label</span>(<span class="st">"wins"</span>),
+        (func.<span class="fn">avg</span>(<span class="fn">case</span>((mp_player.win, <span class="num">1.0</span>), else_=<span class="num">0.0</span>)) * <span class="num">100</span>).<span class="fn">label</span>(<span class="st">"win_rate"</span>),
+    )
+    .<span class="fn">join</span>(mp_enemy, (mp_player.gameId == mp_enemy.gameId) &
+                   (mp_player.individualPosition == mp_enemy.individualPosition) &
+                   (mp_player.teamId != mp_enemy.teamId))
+    .<span class="fn">where</span>(mp_player.puuid == puuid)
+    .<span class="fn">group_by</span>(mp_enemy.championId)
+    .<span class="fn">having</span>(func.<span class="fn">count</span>() >= <span class="num">3</span>)
+    .<span class="fn">order_by</span>(func.<span class="fn">count</span>().<span class="fn">desc</span>())
+)
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 7 Deliverable</div>
+      <p>Matchup endpoint returns enemy champions with win rates. The self-join works correctly — verify by cross-checking one matchup manually against your match history.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 8 -->
+<div class="day" id="day-8">
+  <div class="day-num-wrap"><div class="day-circle" data-n="8" onclick="toggleDay(8)"></div></div>
+  <div class="day-body" id="body-8">
+    <div class="day-top">
+      <div class="day-title">Champion Matchup Matrix UI</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/stats/MatchupMatrix.tsx</code>. Fetch matchup data with React Query. Sort by win rate ascending by default — worst matchups first. This is more actionable: players want to know where they struggle, not where they dominate.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Render as a card grid — not a table. Each card: champion portrait (top), champion name (below icon), win rate as a colored number, games played. Cards are 80×100px. Use CSS grid: <code>grid-template-columns: repeat(auto-fill, minmax(80px, 1fr))</code>. This adapts to different numbers of matchups.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Color the win rate on each card: red background tint for &lt; 45% (unfavorable), neutral for 45–55%, green tint for &gt; 55% (favorable). The color gradient makes the matrix instantly scannable.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a sort toggle above the matrix: "Worst First" (default, ascending WR) and "Best First" (descending WR). Add a "min games" filter (3/5) — same pattern as the champion stats table.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add this component to the Champions tab in <code>Tabs.tsx</code>, below the existing champion stats table and win rate chart. Label it <code>// Matchup History</code>.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 8 Deliverable</div>
+      <p>Matchup card grid showing all lane opponents sorted by win rate. Worst matchups show red tint, best matchups show green. Instantly scannable at a glance.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 9 -->
+<div class="day" id="day-9">
+  <div class="day-num-wrap"><div class="day-circle" data-n="9" onclick="toggleDay(9)"></div></div>
+  <div class="day-body" id="body-9">
+    <div class="day-top">
+      <div class="day-title">Playstyle Fingerprint — Backend Endpoint</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-db">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/playstyle</code>. Returns 6 normalized scores (0–100) representing the player's playstyle axes: <strong>Aggression</strong>, <strong>Farming</strong>, <strong>Vision</strong>, <strong>Objective Control</strong>, <strong>Teamfight</strong>, <strong>Consistency</strong>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Calculate each axis from your existing data: <strong>Aggression</strong> = normalized avg kills/game. <strong>Farming</strong> = normalized avg cs_per_min (from challenges JSONB). <strong>Vision</strong> = normalized avg visionScore. <strong>Objective Control</strong> = normalized kill_participation average. <strong>Teamfight</strong> = normalized avg assists/game. <strong>Consistency</strong> = 100 - (stddev of KDA × 10) — lower variance = higher consistency.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Normalize each value to 0–100 using min-max normalization based on reasonable bounds. Example for kills: 0 kills/game = 0, 15+ kills/game = 100. For vision score: 0 = 0, 60+ = 100. These bounds are position-agnostic approximations — good enough for a visual fingerprint.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Return format: <code>{ aggression: 72, farming: 45, vision: 38, objective_control: 61, teamfight: 55, consistency: 68 }</code>. Cache with TTL 600s (10 min — changes slowly).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test: curl the endpoint for your main summoner. Values should roughly match your perception of your playstyle. A jungler should have higher objective control than a mid laner. A farm-heavy player should have high farming score.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 9 Deliverable</div>
+      <p>Playstyle endpoint returns 6 scores between 0–100. Values feel qualitatively correct for the summoner's known playstyle.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 10 -->
+<div class="day" id="day-10">
+  <div class="day-num-wrap"><div class="day-circle" data-n="10" onclick="toggleDay(10)"></div></div>
+  <div class="day-body" id="body-10">
+    <div class="day-top">
+      <div class="day-title">Playstyle Fingerprint — Radar Chart</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/PlaystyleRadar.tsx</code>. Use Recharts <code>RadarChart</code> — you haven't used this component yet. Import: <code>RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer</code> from recharts.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Configure: <code>cx="50%" cy="50%" outerRadius="80%"</code>. The <code>PolarAngleAxis</code> shows the 6 axis labels. The <code>Radar</code> fills the shape. Use <code>fill="rgba(30,155,232,0.2)"</code> and <code>stroke="#1E9BE8"</code>. The filled polygon is the player's fingerprint.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Style the axis labels to show emoji icons next to text: ⚔ Aggression, 🌾 Farming, 👁 Vision, 🎯 Objectives, ⚡ Teamfight, 🎲 Consistency. These make the axes immediately recognizable without reading the full word.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a brief interpretation below the chart. Detect the highest and lowest scoring axes and generate a one-line description: <em>"You excel at Teamfighting and Objectives, but your Farming needs work."</em> This is simple string template logic — no AI needed.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add this to the Overview tab in <code>Tabs.tsx</code>, in the right column below the win rate chart. The right column now has: Champion Stats → Win Rate Chart → Playstyle Radar.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// playstyle radar data format for Recharts</span>
+<span class="kw">const</span> radarData = [
+  { axis: <span class="st">'⚔ Aggression'</span>,       value: data.aggression },
+  { axis: <span class="st">'🌾 Farming'</span>,          value: data.farming },
+  { axis: <span class="st">'👁 Vision'</span>,           value: data.vision },
+  { axis: <span class="st">'🎯 Objectives'</span>,      value: data.objective_control },
+  { axis: <span class="st">'⚡ Teamfight'</span>,       value: data.teamfight },
+  { axis: <span class="st">'🎲 Consistency'</span>,     value: data.consistency },
+]
+
+<span class="tag">&lt;RadarChart</span> <span class="attr">data</span>={radarData} <span class="attr">cx</span>=<span class="st">"50%"</span> <span class="attr">cy</span>=<span class="st">"50%"</span> <span class="attr">outerRadius</span>=<span class="st">"75%"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;PolarGrid</span> <span class="attr">stroke</span>=<span class="st">"rgba(30,155,232,0.15)"</span> <span class="tag">/&gt;</span>
+  <span class="tag">&lt;PolarAngleAxis</span> <span class="attr">dataKey</span>=<span class="st">"axis"</span>
+    <span class="attr">tick</span>={{ fill: <span class="st">'#C8C0B0'</span>, fontSize: <span class="num">11</span> }} <span class="tag">/&gt;</span>
+  <span class="tag">&lt;Radar</span> <span class="attr">dataKey</span>=<span class="st">"value"</span>
+    <span class="attr">stroke</span>=<span class="st">"#1E9BE8"</span> <span class="attr">fill</span>=<span class="st">"rgba(30,155,232,0.2)"</span>
+    <span class="attr">strokeWidth</span>={<span class="num">2</span>} <span class="tag">/&gt;</span>
+<span class="tag">&lt;/RadarChart&gt;</span>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 10 Deliverable</div>
+      <p>Radar chart visible in the Overview tab right column. Shape varies meaningfully between different summoners. Interpretation text correctly identifies the top/bottom axis.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 3 -->
+<div class="week-header">
+  <span class="week-pill">Week 3</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 11–14 · Match Detail + Polish + Wrap-Up</span>
+</div>
+
+<!-- DAY 11 -->
+<div class="day" id="day-11">
+  <div class="day-num-wrap"><div class="day-circle" data-n="11" onclick="toggleDay(11)"></div></div>
+  <div class="day-body" id="body-11">
+    <div class="day-top">
+      <div class="day-title">Match Detail Page — Backend</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-db">Backend</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/matches/{game_id}</code>. Returns full match detail: all 10 participants with their stats, and the match metadata (duration, patch, queue). This is the endpoint for the match detail page.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Return participants grouped by team: <code>{ blue_team: [...5 participants], red_team: [...5 participants], match: { duration, patch, winning_team } }</code>. For each participant include: puuid, championId, kills, deaths, assists, goldEarned, totalDamageDealtToChampions, visionScore, individualPosition, win, cs_per_min, damage_share, kill_participation.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/matches/{game_id}/gold-diff</code>. Returns the gold difference between the two teams at each minute, computed from <code>match_timeline_frames</code>. Gold diff = SUM(blue team gold) - SUM(red team gold) per minute. Positive = blue team leading.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Make each match row in <code>MatchRow.tsx</code> clickable — wrap it in a <code>Link</code> to <code>/match/{game_id}?puuid={puuid}</code>. Add a subtle right arrow indicator on hover to signal it's clickable.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test both endpoints with curl. Verify all 10 participants are returned, gold diff values oscillate around 0 and peak in the late game for the winning team.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 11 Deliverable</div>
+      <p>Match detail endpoint returns all 10 participants in two teams. Gold diff endpoint returns per-minute gold advantage. Match rows in the UI are clickable links.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 12 -->
+<div class="day" id="day-12">
+  <div class="day-num-wrap"><div class="day-circle" data-n="12" onclick="toggleDay(12)"></div></div>
+  <div class="day-body" id="body-12">
+    <div class="day-top">
+      <div class="day-title">Match Detail Page — UI</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/app/match/[gameId]/page.tsx</code>. This is a server component — fetch match detail in the component body. Accept <code>searchParams.puuid</code> to highlight the current player's row.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Layout: top section shows match metadata (patch, duration, queue, result). Below: two scoreboard tables side by side — Blue Team (left) and Red Team (right). Between them: a vertical gold diff line chart.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Scoreboard columns: Champion icon, summoner (show first 8 chars of puuid), KDA, Damage, Gold, Vision. Sort by damage dealt descending within each team. Highlight the current player's row with a blue border/background tint.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Gold diff chart: use a Recharts <code>AreaChart</code> where positive values (blue team leading) fill blue and negative values (red team leading) fill red. This requires two <code>Area</code> components with conditional fill, or a custom rendering approach using <code>linearGradient</code> with a dynamic midpoint.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a back button: <code>← Back to Profile</code> linking to <code>/summoner/{puuid}</code>. Add a <code>not-found.tsx</code> in the match folder for invalid game IDs.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 12 Deliverable</div>
+      <p>Clicking any match row in the profile navigates to the match detail page. Both team scoreboards render with champion icons. Gold diff chart shows the game's momentum swing.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 13 -->
+<div class="day" id="day-13">
+  <div class="day-num-wrap"><div class="day-circle" data-n="13" onclick="toggleDay(13)"></div></div>
+  <div class="day-body" id="body-13">
+    <div class="day-top">
+      <div class="day-title">Performance Trend — Rolling Averages</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Upgrade the KDA trend chart to show a rolling average line alongside the per-game dots. A 5-game rolling average smooths out variance and shows the true performance trend. Add a second <code>Line</code> to the existing <code>LineChart</code> with <code>dataKey="rolling_avg"</code> in a different color (e.g. white with lower opacity).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Compute the rolling average in the backend: in the <code>get_kda_trend</code> endpoint, after building the result list, add a <code>rolling_avg</code> field to each point. For point i: <code>avg(kda[max(0, i-4):i+1])</code> — average of current game and up to 4 previous games.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a legend to the chart: two items — "Per Game" (colored dots) and "5-Game Avg" (white line). Use Recharts <code>Legend</code> component, styled to match the dark theme.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a limit selector above the chart: "Last 10", "Last 20", "Last 50" games. Clicking updates the query param and re-fetches. This lets players see their short-term vs. long-term trend. Use React Query with the limit as part of the query key.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 13 Deliverable</div>
+      <p>KDA trend chart shows both per-game dots and a smooth 5-game rolling average line. Last 10/20/50 selector changes the view. Trend direction is immediately visible.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 14 -->
+<div class="day" id="day-14">
+  <div class="day-num-wrap"><div class="day-circle" data-n="14" onclick="toggleDay(14)"></div></div>
+  <div class="day-body" id="body-14">
+    <div class="day-top">
+      <div class="day-title">Phase 4 Wrap-Up + Phase 5 Prep</div>
+      <div class="day-meta"><span class="time-pill">~1 hr</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Full end-to-end test of all new analytics: Timeline tab (gold curve brush, vision impact, damage efficiency), Champions tab (matchup matrix), Overview tab (playstyle radar). Click through 3 different summoners — data should vary meaningfully between them.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Click a match row → verify match detail page loads with both team scoreboards and gold diff chart. Click Back → returns to profile. Test an invalid game ID → shows not-found page.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Performance check: open Chrome DevTools Network tab on the profile page. All analytics endpoints should return in &lt;200ms (from Redis cache on second load). If any endpoint is slow, check that cache invalidation isn't being called too aggressively.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Commit and tag: <code>git add -A && git commit -m "feat: phase 4 complete — advanced analytics"</code> then <code>git tag v0.4-phase4-complete</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Phase 5 preview: read the blueprint ML section on Tilt Detection and Draft Win Probability. You'll need to export training data from your DB as a pandas DataFrame. Skim the scikit-learn pipeline docs and the XGBoost quickstart. The data you've been collecting since Phase 1 is your training set.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Phase 4 Complete</div>
+      <p>Full advanced analytics suite: gold curves with brush, vision impact, damage efficiency, matchup matrix, playstyle radar, match detail page, and rolling KDA trend. The dashboard is now genuinely more insightful than op.gg for the metrics it covers.</p>
+    </div>
+  </div>
+</div>
+
+<footer>Phase 4 of 6 — League of Legends Analytics Dashboard · Click any day circle to mark complete</footer>
+
+<script>
+  const STORAGE_KEY = 'lol_phase4_progress';
+  function loadState(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return{}}}
+  function saveState(s){localStorage.setItem(STORAGE_KEY,JSON.stringify(s))}
+  let state = loadState();
+  function toggleDay(n){state[`day_${n}`]=!state[`day_${n}`];saveState(state);renderDay(n);updateStats();}
+  function toggleTask(li){li.classList.toggle('checked');updateStats();}
+  function renderDay(n){
+    const c=document.querySelector(`#day-${n} .day-circle`);
+    const b=document.getElementById(`body-${n}`);
+    const done=!!state[`day_${n}`];
+    c.classList.toggle('done',done);b.classList.toggle('done',done);
+  }
+  function updateStats(){
+    const total=14;
+    const done=Object.values(state).filter(Boolean).length;
+    const tasksDone=document.querySelectorAll('.tasks li.checked').length;
+    document.getElementById('pct-label').textContent=`${done} / ${total} days complete`;
+    document.getElementById('progress-fill').style.width=`${(done/total)*100}%`;
+    document.getElementById('tasks-done').textContent=tasksDone;
+    const end=new Date();end.setDate(end.getDate()+(total-done));
+    document.getElementById('end-date').textContent=end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  for(let i=1;i<=14;i++)renderDay(i);
+  updateStats();
+</script>
+</body>
+</html>

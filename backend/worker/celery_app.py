@@ -13,10 +13,16 @@ celery_app.conf.result_serializer = "json"
 celery_app.conf.accept_content = ["json"]
 celery_app.conf.task_track_started = True
 celery_app.conf.task_acks_late = True
-celery_app.conf.include = ["worker.tasks.ping", "worker.tasks.ingest", "worker.tasks.refresh"]
+celery_app.conf.include = [
+    "worker.tasks.ping",
+    "worker.tasks.ingest",
+    "worker.tasks.refresh",
+    "worker.tasks.ml",
+]
 celery_app.conf.task_routes = {
 	"worker.tasks.ingest.*": {"queue": "ingestion"},
 	"worker.tasks.refresh.*": {"queue": "refresh"},
+	"worker.tasks.ml.*": {"queue": "refresh"},
 	"worker.tasks.ping": {"queue": "refresh"},
 }
 celery_app.conf.timezone = "UTC"
@@ -35,5 +41,10 @@ celery_app.conf.beat_schedule = {
     "task": "worker.tasks.ingest.retry_failed_ingestions",
     "schedule": crontab(hour="3", minute="0"),  # 3am UTC daily
     "options": {"queue": "ingestion"},
+    },
+    "retrain-models-weekly": {
+        "task": "worker.tasks.ml.retrain_models_weekly",
+        "schedule": crontab(day_of_week="sun", hour="2", minute="0"),
+        "options": {"queue": "refresh"},
     },
 }

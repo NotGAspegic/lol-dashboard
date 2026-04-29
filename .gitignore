@@ -20,6 +20,7 @@ logs/
 # IDEs
 .vscode/
 .idea/
+.codex
 *.swp
 *.swo
 *.save
@@ -28,4 +29,8 @@ logs/
 Thumbs.db
 
 #Blueprints
-blueprints/
+blueprints
+
+backend/ml/models/
+backend/ml/data/*.csv
+backend/ml/data/*.csv

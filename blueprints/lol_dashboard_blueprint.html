@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoL Analytics Dashboard — Project Blueprint</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500&display=swap');
+
+  :root {
+    --gold: #C89B3C;
+    --gold-light: #F0E6C8;
+    --gold-dim: #7A5C1E;
+    --bg: #0A0C10;
+    --bg2: #111318;
+    --bg3: #181C24;
+    --border: rgba(200,155,60,0.18);
+    --border-bright: rgba(200,155,60,0.4);
+    --text: #D8D0C0;
+    --text-dim: #6E6860;
+    --text-bright: #F0E6C8;
+    --blue: #4A9EFF;
+    --teal: #2ABFAA;
+    --red: #E8523C;
+    --purple: #9B72CF;
+    --green: #4CAF72;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+
+  /* ── Header ── */
+  .doc-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    margin-bottom: 56px;
+  }
+  .doc-header .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(200,155,60,0.1);
+    border: 1px solid var(--border-bright);
+    color: var(--gold);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  .doc-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 5vw, 46px);
+    color: var(--gold-light);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .doc-header h1 span { color: var(--gold); }
+  .doc-header p { color: var(--text-dim); max-width: 600px; font-size: 15px; }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-top: 28px;
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .meta-item .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+  .meta-item .value {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 56px;
+  }
+  .toc-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 6px 0; }
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--gold); }
+
+  /* ── Sections ── */
+  .section { margin-bottom: 64px; }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2 .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    background: rgba(200,155,60,0.1);
+    border: 1px solid var(--border-bright);
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--text-bright);
+    margin: 28px 0 10px;
+  }
+  h3.sub { font-size: 15px; color: var(--gold); margin-top: 22px; }
+
+  p { margin-bottom: 14px; color: var(--text); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .card.highlight {
+    border-color: var(--border-bright);
+    background: linear-gradient(135deg, rgba(200,155,60,0.06), var(--bg2));
+  }
+
+  /* ── Tech Stack Grid ── */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .stack-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+  }
+  .stack-item .layer {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .stack-item .tech {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .stack-item p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* ── Code Blocks ── */
+  pre {
+    background: #0D1117;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .kw { color: #FF7B72; }
+  .fn { color: #D2A8FF; }
+  .st { color: #A5D6FF; }
+  .cm { color: #8B949E; }
+  .num { color: #79C0FF; }
+  .cl { color: #FFA657; }
+  .dec { color: #56D364; }
+
+  /* ── Phase Timeline ── */
+  .phases { margin: 24px 0; }
+  .phase {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0 24px;
+    position: relative;
+  }
+  .phase:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 39px;
+    top: 52px;
+    bottom: -8px;
+    width: 2px;
+    background: var(--border);
+  }
+  .phase-num {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+  }
+  .phase-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid var(--gold-dim);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--gold);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .phase-body {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 16px;
+  }
+  .phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .phase-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-bright);
+  }
+  .phase-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+  .tag-setup { color: var(--teal); border-color: rgba(42,191,170,0.3); background: rgba(42,191,170,0.06); }
+  .tag-data  { color: var(--blue); border-color: rgba(74,158,255,0.3); background: rgba(74,158,255,0.06); }
+  .tag-ui    { color: var(--purple); border-color: rgba(155,114,207,0.3); background: rgba(155,114,207,0.06); }
+  .tag-analytics { color: var(--gold); border-color: var(--border-bright); background: rgba(200,155,60,0.06); }
+  .tag-ml    { color: var(--red); border-color: rgba(232,82,60,0.3); background: rgba(232,82,60,0.06); }
+  .tag-deploy { color: var(--green); border-color: rgba(76,175,114,0.3); background: rgba(76,175,114,0.06); }
+
+  .task-list { list-style: none; padding: 0; margin: 0; }
+  .task-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text);
+    padding: 3px 0;
+  }
+  .task-list li::before {
+    content: '→';
+    color: var(--gold-dim);
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding-top: 2px;
+  }
+
+  /* ── Schema tables ── */
+  .schema-block {
+    margin: 20px 0;
+  }
+  .schema-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    background: rgba(200,155,60,0.1);
+    border: 1px solid var(--border-bright);
+    border-bottom: none;
+    padding: 6px 16px;
+    border-radius: 6px 6px 0 0;
+    display: inline-block;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 0 6px 6px 6px;
+    overflow: hidden;
+  }
+  th {
+    background: var(--bg3);
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 7px 14px;
+    border-bottom: 1px solid rgba(200,155,60,0.06);
+    color: var(--text);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(200,155,60,0.04); }
+  .col-name { color: var(--blue); }
+  .col-type { color: var(--teal); }
+  .col-pk   { color: var(--gold); font-weight: 500; }
+  .col-fk   { color: var(--purple); }
+  .col-note { color: var(--text-dim); font-size: 12px; }
+
+  /* ── ML Model Cards ── */
+  .ml-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .ml-card-header {
+    background: var(--bg3);
+    padding: 16px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .ml-card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-bright);
+  }
+  .ml-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .ml-card-body { padding: 20px 22px; background: var(--bg2); }
+
+  .feature-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .feature-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 3px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-dim);
+  }
+  .feature-pill.important {
+    border-color: rgba(200,155,60,0.4);
+    color: var(--gold);
+  }
+
+  /* ── Architecture Diagram ── */
+  .arch-diagram {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+
+  /* ── Callout ── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    margin: 16px 0;
+    border: 1px solid;
+  }
+  .callout.info {
+    background: rgba(74,158,255,0.06);
+    border-color: rgba(74,158,255,0.25);
+    color: #7BB8FF;
+  }
+  .callout.warn {
+    background: rgba(200,155,60,0.06);
+    border-color: var(--border-bright);
+    color: var(--gold);
+  }
+  .callout.tip {
+    background: rgba(76,175,114,0.06);
+    border-color: rgba(76,175,114,0.25);
+    color: #7EC89A;
+  }
+  .callout-icon {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding-top: 1px;
+    flex-shrink: 0;
+  }
+  .callout p { color: inherit; margin: 0; font-size: 14px; }
+
+  /* ── Two-col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    margin-top: 64px;
+    text-align: center;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="doc-header">
+  <div class="badge">◆ Project Blueprint v1.0</div>
+  <h1>League of Legends<br><span>Advanced Analytics Dashboard</span></h1>
+  <p>A full-stack, ML-powered player intelligence platform — from Riot API ingestion to predictive tilt detection and draft win probability models.</p>
+  <div class="meta-row">
+    <div class="meta-item"><span class="label">Stack Tier</span><span class="value">Production-Grade</span></div>
+    <div class="meta-item"><span class="label">ML Complexity</span><span class="value">Intermediate → Advanced</span></div>
+    <div class="meta-item"><span class="label">Timeline</span><span class="value">~16 Weeks</span></div>
+    <div class="meta-item"><span class="label">Phases</span><span class="value">6 Phases</span></div>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <div class="toc-title">// Table of Contents</div>
+  <ol>
+    <li><a href="#tech">Tech Stack Decisions & Rationale</a></li>
+    <li><a href="#architecture">System Architecture & API Rate Limiting</a></li>
+    <li><a href="#database">Database Schema Blueprint</a></li>
+    <li><a href="#ml">Machine Learning Strategy</a></li>
+    <li><a href="#phases">Implementation Phases (1–6)</a></li>
+    <li><a href="#api">FastAPI Endpoint Reference</a></li>
+  </ol>
+</div>
+
+
+<!-- SECTION 1: TECH STACK -->
+<div class="section" id="tech">
+  <h2><span class="section-num">01</span>Tech Stack Decisions & Rationale</h2>
+  <p>Each choice is optimized for handling large-scale match data, serving real-time ML predictions, and rendering dense data visualizations without sacrificing DX.</p>
+
+  <div class="stack-grid">
+    <div class="stack-item">
+      <div class="layer">Frontend</div>
+      <div class="tech">Next.js 14 + TypeScript</div>
+      <p>App Router for server-side data fetching per route. RSC reduces JS bundle for heavy data pages. TypeScript catches Riot API shape mismatches at compile time.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Styling</div>
+      <div class="tech">TailwindCSS + shadcn/ui</div>
+      <p>shadcn gives unstyled, accessible primitives you own. Tailwind allows rapid iteration on dense data layouts without CSS overhead.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Charts</div>
+      <div class="tech">Recharts + D3.js</div>
+      <p>Recharts for standard React charts (KDA line, win rate bar). D3 for custom visuals: gold curve brushes, hexbin matchup maps, force-graph synergy networks.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Backend API</div>
+      <div class="tech">FastAPI (Python 3.11+)</div>
+      <p>Async-native, automatic OpenAPI docs, Pydantic validation. 3× faster than Flask for concurrent Riot API calls. Native support for serving ML model predictions.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Task Queue</div>
+      <div class="tech">Celery + Redis Broker</div>
+      <p>Background workers for match ingestion respect Riot rate limits. Beat scheduler for periodic summoner refresh. Flower dashboard for queue monitoring.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Primary DB</div>
+      <div class="tech">PostgreSQL 16 + TimescaleDB</div>
+      <p>TimescaleDB hypertable on <code>match_timeline_frames</code> enables time-bucketing queries at millisecond speed across millions of frame rows.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Cache & Rate Limit</div>
+      <div class="tech">Redis 7</div>
+      <p>Token-bucket rate limiter for Riot API (20 req/s, 100 req/2min). Response cache for champion data (CDragon). Session store. Celery broker.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Machine Learning</div>
+      <div class="tech">scikit-learn + XGBoost + pandas</div>
+      <p>XGBoost for tabular classification (tilt, draft). scikit-learn pipelines for preprocessing. joblib for model serialization. No GPU needed at this scale.</p>
+    </div>
+    <div class="stack-item">
+      <div class="layer">Deployment</div>
+      <div class="tech">Docker Compose → Railway</div>
+      <p>Docker Compose for local dev parity. Railway for FastAPI + Celery workers + Redis. Vercel for Next.js frontend. GitHub Actions for CI/CD.</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠ NOTE</span>
+    <p>Do NOT use TensorFlow/PyTorch for these models. XGBoost on tabular Riot data will outperform a neural network at this scale and be 10× easier to debug, explain, and deploy without a GPU server.</p>
+  </div>
+</div>
+
+
+<!-- SECTION 2: ARCHITECTURE -->
+<div class="section" id="architecture">
+  <h2><span class="section-num">02</span>System Architecture & Rate Limiting</h2>
+
+  <p>The system has three distinct data flows: <strong>ingestion</strong> (background, rate-limited), <strong>query</strong> (user-triggered, cached), and <strong>prediction</strong> (on-demand, model-served).</p>
+
+  <div class="arch-diagram">
+    <svg width="100%" viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- User -->
+      <rect x="30" y="20" width="110" height="44" rx="8" fill="#1A1E28" stroke="#C89B3C" stroke-width="1" stroke-opacity="0.5"/>
+      <text x="85" y="47" text-anchor="middle" fill="#F0E6C8" font-family="Syne,sans-serif" font-size="13" font-weight="600">Browser</text>
+
+      <!-- Next.js -->
+      <rect x="30" y="120" width="110" height="44" rx="8" fill="#1A1E28" stroke="#4A9EFF" stroke-width="1"/>
+      <text x="85" y="141" text-anchor="middle" fill="#7BB8FF" font-family="DM Mono,monospace" font-size="10">FRONTEND</text>
+      <text x="85" y="155" text-anchor="middle" fill="#D8D0C0" font-family="Syne,sans-serif" font-size="13" font-weight="600">Next.js 14</text>
+
+      <!-- Arrow Browser → Next.js -->
+      <line x1="85" y1="64" x2="85" y2="118" stroke="#4A9EFF" stroke-width="1" stroke-opacity="0.6" marker-end="url(#arr)"/>
+      <text x="90" y="96" fill="#4A9EFF" font-family="DM Mono,monospace" font-size="10" opacity="0.7">HTTP/WS</text>
+
+      <!-- FastAPI -->
+      <rect x="360" y="120" width="140" height="56" rx="8" fill="#1A1E28" stroke="#C89B3C" stroke-width="1.5"/>
+      <text x="430" y="141" text-anchor="middle" fill="#C89B3C" font-family="DM Mono,monospace" font-size="10">API LAYER</text>
+      <text x="430" y="157" text-anchor="middle" fill="#F0E6C8" font-family="Syne,sans-serif" font-size="14" font-weight="700">FastAPI</text>
+      <text x="430" y="170" text-anchor="middle" fill="#6E6860" font-family="DM Mono,monospace" font-size="10">Python 3.11+</text>
+
+      <!-- Arrow Next.js → FastAPI -->
+      <line x1="140" y1="142" x2="358" y2="142" stroke="#C89B3C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)"/>
+      <text x="245" y="136" text-anchor="middle" fill="#C89B3C" font-family="DM Mono,monospace" font-size="10" opacity="0.8">REST / WebSocket</text>
+
+      <!-- Rate Limiter -->
+      <rect x="240" y="240" width="130" height="44" rx="8" fill="#1A1E28" stroke="#E8523C" stroke-width="1"/>
+      <text x="305" y="260" text-anchor="middle" fill="#E8523C" font-family="DM Mono,monospace" font-size="10">GUARD</text>
+      <text x="305" y="275" text-anchor="middle" fill="#D8D0C0" font-family="Syne,sans-serif" font-size="12" font-weight="600">Rate Limiter</text>
+
+      <!-- Redis -->
+      <rect x="530" y="240" width="110" height="44" rx="8" fill="#1A1E28" stroke="#E8523C" stroke-width="1"/>
+      <text x="585" y="261" text-anchor="middle" fill="#E8523C" font-family="DM Mono,monospace" font-size="10">CACHE / QUEUE</text>
+      <text x="585" y="275" text-anchor="middle" fill="#D8D0C0" font-family="Syne,sans-serif" font-size="12" font-weight="600">Redis 7</text>
+
+      <!-- FastAPI → Rate Limiter -->
+      <line x1="400" y1="176" x2="340" y2="240" stroke="#E8523C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)"/>
+
+      <!-- Rate Limiter → Redis (token bucket) -->
+      <line x1="370" y1="262" x2="528" y2="262" stroke="#E8523C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)"/>
+      <text x="448" y="256" text-anchor="middle" fill="#E8523C" font-family="DM Mono,monospace" font-size="9" opacity="0.8">token bucket</text>
+
+      <!-- Riot API -->
+      <rect x="700" y="20" width="130" height="56" rx="8" fill="#1A1E28" stroke="#9B72CF" stroke-width="1.5"/>
+      <text x="765" y="40" text-anchor="middle" fill="#9B72CF" font-family="DM Mono,monospace" font-size="10">EXTERNAL</text>
+      <text x="765" y="57" text-anchor="middle" fill="#F0E6C8" font-family="Syne,sans-serif" font-size="13" font-weight="700">Riot Games API</text>
+      <text x="765" y="69" text-anchor="middle" fill="#6E6860" font-family="DM Mono,monospace" font-size="9">v5 endpoints</text>
+
+      <!-- Rate Limiter → Riot API -->
+      <path d="M 370 240 Q 550 160 698 48" fill="none" stroke="#9B72CF" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)"/>
+
+      <!-- Celery Workers -->
+      <rect x="240" y="360" width="130" height="44" rx="8" fill="#1A1E28" stroke="#2ABFAA" stroke-width="1"/>
+      <text x="305" y="378" text-anchor="middle" fill="#2ABFAA" font-family="DM Mono,monospace" font-size="10">ASYNC WORKERS</text>
+      <text x="305" y="394" text-anchor="middle" fill="#D8D0C0" font-family="Syne,sans-serif" font-size="12" font-weight="600">Celery</text>
+
+      <!-- Redis → Celery -->
+      <line x1="530" y1="270" x2="374" y2="370" stroke="#2ABFAA" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)"/>
+      <text x="470" y="315" text-anchor="middle" fill="#2ABFAA" font-family="DM Mono,monospace" font-size="9" opacity="0.8">task queue</text>
+
+      <!-- PostgreSQL -->
+      <rect x="360" y="380" width="140" height="56" rx="8" fill="#1A1E28" stroke="#4CAF72" stroke-width="1"/>
+      <text x="430" y="400" text-anchor="middle" fill="#4CAF72" font-family="DM Mono,monospace" font-size="10">PRIMARY DB</text>
+      <text x="430" y="416" text-anchor="middle" fill="#F0E6C8" font-family="Syne,sans-serif" font-size="13" font-weight="700">PostgreSQL 16</text>
+      <text x="430" y="429" text-anchor="middle" fill="#6E6860" font-family="DM Mono,monospace" font-size="10">+ TimescaleDB</text>
+
+      <!-- Celery → PostgreSQL -->
+      <line x1="370" y1="382" x2="430" y2="378" stroke="#4CAF72" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)"/>
+
+      <!-- FastAPI → PostgreSQL (read) -->
+      <line x1="430" y1="176" x2="430" y2="378" stroke="#4CAF72" stroke-width="1" stroke-opacity="0.4" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+
+      <!-- ML Model Server -->
+      <rect x="590" y="380" width="130" height="56" rx="8" fill="#1A1E28" stroke="#E8523C" stroke-width="1"/>
+      <text x="655" y="400" text-anchor="middle" fill="#E8523C" font-family="DM Mono,monospace" font-size="10">ML SERVICE</text>
+      <text x="655" y="416" text-anchor="middle" fill="#F0E6C8" font-family="Syne,sans-serif" font-size="13" font-weight="700">Model Server</text>
+      <text x="655" y="429" text-anchor="middle" fill="#6E6860" font-family="DM Mono,monospace" font-size="10">XGBoost / sklearn</text>
+
+      <!-- FastAPI → ML Server -->
+      <path d="M 500 165 Q 660 220 655 378" fill="none" stroke="#E8523C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+
+      <!-- ML Server ← PostgreSQL -->
+      <line x1="500" y1="408" x2="588" y2="408" stroke="#E8523C" stroke-width="1" stroke-opacity="0.4" marker-end="url(#arr)" stroke-dasharray="3 3"/>
+      <text x="544" y="403" text-anchor="middle" fill="#E8523C" font-family="DM Mono,monospace" font-size="9" opacity="0.7">features</text>
+
+      <!-- Riot → Celery (data flows back) -->
+      <path d="M 700 48 Q 600 300 374 375" fill="none" stroke="#9B72CF" stroke-width="1" stroke-opacity="0.3" marker-end="url(#arr)" stroke-dasharray="3 3"/>
+
+      <!-- Legend -->
+      <text x="30" y="490" fill="#6E6860" font-family="DM Mono,monospace" font-size="11">solid = sync request   dashed = async / background</text>
+    </svg>
+  </div>
+
+  <h3>Rate Limiting Strategy — Redis Token Bucket</h3>
+  <p>Riot enforces two limits simultaneously: <strong>20 requests/second</strong> and <strong>100 requests/2 minutes</strong>. A dual-bucket Redis implementation handles both atomically.</p>
+
+<pre><span class="cm"># rate_limiter.py — Redis Lua script for atomic token bucket</span>
+<span class="kw">import</span> redis
+<span class="kw">import</span> time
+
+<span class="dec">RATE_LIMIT_SCRIPT</span> = <span class="st">"""
+local key_short = KEYS[1]
+local key_long  = KEYS[2]
+local now       = tonumber(ARGV[1])
+
+-- Short window: 20 req/s
+local short_count = redis.call('INCR', key_short)
+if short_count == 1 then redis.call('EXPIRE', key_short, 1) end
+if short_count > 20 then return {0, 'short'} end
+
+-- Long window: 100 req/2min
+local long_count = redis.call('INCR', key_long)
+if long_count == 1 then redis.call('EXPIRE', key_long, 120) end
+if long_count > 100 then return {0, 'long'} end
+
+return {1, 'ok'}
+"""</span>
+
+<span class="kw">class</span> <span class="cl">RiotRateLimiter</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, redis_client):
+        self.r = redis_client
+        self.script = self.r.register_script(<span class="dec">RATE_LIMIT_SCRIPT</span>)
+
+    <span class="kw">async def</span> <span class="fn">acquire</span>(self, region: str) -> <span class="fn">bool</span>:
+        result = self.script(
+            keys=[f<span class="st">"rl:{region}:short"</span>, f<span class="st">"rl:{region}:long"</span>],
+            args=[<span class="fn">int</span>(time.time())]
+        )
+        <span class="kw">if</span> result[<span class="num">0</span>] == <span class="num">0</span>:
+            wait = <span class="num">1</span> <span class="kw">if</span> result[<span class="num">1</span>] == <span class="st">'short'</span> <span class="kw">else</span> <span class="num">5</span>
+            <span class="kw">await</span> asyncio.sleep(wait)
+            <span class="kw">return await</span> self.<span class="fn">acquire</span>(region)
+        <span class="kw">return True</span></pre>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ INFO</span>
+    <p>Always check the <code>X-Rate-Limit-Count</code> and <code>X-App-Rate-Limit</code> headers in Riot API responses. Your local counter can drift from Riot's server-side counter due to network delays. Use the response headers as ground truth and throttle accordingly.</p>
+  </div>
+
+  <h3>Match Ingestion Flow (Celery Worker)</h3>
+<pre><span class="cm"># tasks/ingest.py</span>
+<span class="kw">from</span> celery <span class="kw">import</span> shared_task
+
+<span class="dec">@shared_task</span>(bind=<span class="kw">True</span>, max_retries=<span class="num">3</span>, default_retry_delay=<span class="num">60</span>)
+<span class="kw">async def</span> <span class="fn">ingest_match</span>(self, match_id: str, region: str):
+    <span class="cm">"""Fetch, parse, and store a single match + its timeline."""</span>
+    <span class="kw">try</span>:
+        <span class="kw">await</span> rate_limiter.<span class="fn">acquire</span>(region)
+        match_dto   = <span class="kw">await</span> riot_client.<span class="fn">get_match</span>(match_id, region)
+        timeline    = <span class="kw">await</span> riot_client.<span class="fn">get_timeline</span>(match_id, region)
+        
+        <span class="kw">async with</span> db_session() <span class="kw">as</span> session:
+            <span class="kw">await</span> <span class="fn">upsert_match</span>(session, match_dto)
+            <span class="kw">await</span> <span class="fn">upsert_participants</span>(session, match_dto)
+            <span class="kw">await</span> <span class="fn">upsert_timeline_frames</span>(session, timeline)
+            <span class="kw">await</span> session.<span class="fn">commit</span>()
+            
+    <span class="kw">except</span> RiotRateLimitError <span class="kw">as</span> e:
+        <span class="kw">raise</span> self.<span class="fn">retry</span>(exc=e, countdown=<span class="num">30</span>)</pre>
+</div>
+
+
+<!-- SECTION 3: DATABASE -->
+<div class="section" id="database">
+  <h2><span class="section-num">03</span>Database Schema Blueprint</h2>
+  <p>PostgreSQL + TimescaleDB. The <code>match_timeline_frames</code> table is the core ML feature store — it's a TimescaleDB hypertable partitioned by <code>frame_timestamp</code> for time-range queries at scale.</p>
+
+  <div class="schema-block">
+    <div class="schema-title">TABLE: summoners</div>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="col-pk">id</td><td class="col-type">UUID PK</td><td class="col-note">Internal primary key</td></tr>
+        <tr><td class="col-name">puuid</td><td class="col-type">VARCHAR(78)</td><td class="col-note">UNIQUE. Riot's permanent player ID — survives name changes</td></tr>
+        <tr><td class="col-name">summoner_id</td><td class="col-type">VARCHAR(63)</td><td class="col-note">Encrypted. Region-specific. Used for ranked API calls</td></tr>
+        <tr><td class="col-name">game_name</td><td class="col-type">VARCHAR(16)</td><td class="col-note">Riot ID username (post-2023 update)</td></tr>
+        <tr><td class="col-name">tag_line</td><td class="col-type">VARCHAR(5)</td><td class="col-note">e.g., 'NA1'. Combines with game_name for display</td></tr>
+        <tr><td class="col-name">region</td><td class="col-type">VARCHAR(8)</td><td class="col-note">e.g., 'na1', 'euw1'. For routing cluster selection</td></tr>
+        <tr><td class="col-name">profile_icon_id</td><td class="col-type">INTEGER</td><td class="col-note">Maps to CDragon icon assets</td></tr>
+        <tr><td class="col-name">summoner_level</td><td class="col-type">INTEGER</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">last_updated</td><td class="col-type">TIMESTAMPTZ</td><td class="col-note">Controls refresh scheduling via Celery Beat</td></tr>
+        <tr><td class="col-name">match_history_cursor</td><td class="col-type">VARCHAR(32)</td><td class="col-note">Stores the last ingested match start index for incremental sync</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="schema-block">
+    <div class="schema-title">TABLE: matches</div>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="col-pk">match_id</td><td class="col-type">VARCHAR(16) PK</td><td class="col-note">e.g., 'NA1_4823...' — Riot's global match ID</td></tr>
+        <tr><td class="col-name">game_start</td><td class="col-type">TIMESTAMPTZ</td><td class="col-note">INDEX. Used for time-range filtering</td></tr>
+        <tr><td class="col-name">game_duration</td><td class="col-type">INTEGER</td><td class="col-note">Seconds. Remakes are < 300s — filter these from ML training</td></tr>
+        <tr><td class="col-name">queue_type</td><td class="col-type">SMALLINT</td><td class="col-note">420=SoloQ, 440=Flex, 450=ARAM. Filter in all ML models</td></tr>
+        <tr><td class="col-name">game_version</td><td class="col-type">VARCHAR(10)</td><td class="col-note">e.g., '14.10'. Patch version affects champion viability — use as ML feature</td></tr>
+        <tr><td class="col-name">winning_team</td><td class="col-type">SMALLINT</td><td class="col-note">100 = Blue, 200 = Red</td></tr>
+        <tr><td class="col-name">platform</td><td class="col-type">VARCHAR(8)</td><td class="col-note">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="schema-block">
+    <div class="schema-title">TABLE: match_participants  (FK → matches.match_id, summoners.puuid)</div>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="col-pk">id</td><td class="col-type">UUID PK</td><td class="col-note">—</td></tr>
+        <tr><td class="col-fk">match_id</td><td class="col-type">VARCHAR FK</td><td class="col-note">INDEX</td></tr>
+        <tr><td class="col-fk">puuid</td><td class="col-type">VARCHAR FK</td><td class="col-note">INDEX — most queries start here</td></tr>
+        <tr><td class="col-name">champion_id</td><td class="col-type">SMALLINT</td><td class="col-note">INDEX. Numeric ID for fast aggregation</td></tr>
+        <tr><td class="col-name">team_id</td><td class="col-type">SMALLINT</td><td class="col-note">100 / 200</td></tr>
+        <tr><td class="col-name">position</td><td class="col-type">VARCHAR(10)</td><td class="col-note">TOP/JUNGLE/MID/BOTTOM/UTILITY</td></tr>
+        <tr><td class="col-name">kills / deaths / assists</td><td class="col-type">SMALLINT × 3</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">total_damage_dealt_to_champions</td><td class="col-type">INTEGER</td><td class="col-note">Core analytics metric</td></tr>
+        <tr><td class="col-name">gold_earned</td><td class="col-type">INTEGER</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">vision_score</td><td class="col-type">SMALLINT</td><td class="col-note">Used in vision impact analysis</td></tr>
+        <tr><td class="col-name">cs_per_min</td><td class="col-type">NUMERIC(5,2)</td><td class="col-note">Computed on insert: (minionsKilled+neutralMinionsKilled) / (gameDuration/60)</td></tr>
+        <tr><td class="col-name">damage_share</td><td class="col-type">NUMERIC(5,4)</td><td class="col-note">Computed: participant_damage / team_total_damage</td></tr>
+        <tr><td class="col-name">gold_share</td><td class="col-type">NUMERIC(5,4)</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">kill_participation</td><td class="col-type">NUMERIC(5,4)</td><td class="col-note">(kills + assists) / team_kills</td></tr>
+        <tr><td class="col-name">won</td><td class="col-type">BOOLEAN</td><td class="col-note">INDEX — almost all queries filter by this</td></tr>
+        <tr><td class="col-name">first_blood</td><td class="col-type">BOOLEAN</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">items</td><td class="col-type">SMALLINT[7]</td><td class="col-note">Array of 7 item IDs at game end</td></tr>
+        <tr><td class="col-name">perks</td><td class="col-type">JSONB</td><td class="col-note">Full rune object. JSONB for flexible querying</td></tr>
+        <tr><td class="col-name">challenges</td><td class="col-type">JSONB</td><td class="col-note">Full challenge data — mine for advanced metrics</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="schema-block">
+    <div class="schema-title">TABLE: match_timeline_frames  ← TimescaleDB Hypertable</div>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="col-pk">id</td><td class="col-type">BIGSERIAL PK</td><td class="col-note">—</td></tr>
+        <tr><td class="col-fk">match_id</td><td class="col-type">VARCHAR FK</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">participant_id</td><td class="col-type">SMALLINT</td><td class="col-note">1–10. NOT a FK to match_participants (performance)</td></tr>
+        <tr><td class="col-name">frame_timestamp</td><td class="col-type">INTEGER</td><td class="col-note">Milliseconds from game start. TimescaleDB partitions on this</td></tr>
+        <tr><td class="col-name">minute</td><td class="col-type">SMALLINT</td><td class="col-note">Computed: frame_timestamp / 60000. INDEX</td></tr>
+        <tr><td class="col-name">current_gold</td><td class="col-type">INTEGER</td><td class="col-note">Gold held at this frame</td></tr>
+        <tr><td class="col-name">total_gold</td><td class="col-type">INTEGER</td><td class="col-note">Total gold earned (includes spent)</td></tr>
+        <tr><td class="col-name">xp</td><td class="col-type">INTEGER</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">level</td><td class="col-type">SMALLINT</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">minions_killed</td><td class="col-type">SMALLINT</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">jungle_minions_killed</td><td class="col-type">SMALLINT</td><td class="col-note">—</td></tr>
+        <tr><td class="col-name">pos_x / pos_y</td><td class="col-type">SMALLINT × 2</td><td class="col-note">Map position. Use for heatmap + positioning analysis</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two-col">
+    <div class="schema-block">
+      <div class="schema-title">TABLE: tilt_snapshots</div>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td class="col-fk">puuid</td><td class="col-type">VARCHAR FK</td></tr>
+          <tr><td class="col-name">snapshot_at</td><td class="col-type">TIMESTAMPTZ</td></tr>
+          <tr><td class="col-name">consecutive_losses</td><td class="col-type">SMALLINT</td></tr>
+          <tr><td class="col-name">kda_slope</td><td class="col-type">NUMERIC(6,4)</td></tr>
+          <tr><td class="col-name">death_trend</td><td class="col-type">NUMERIC(6,4)</td></tr>
+          <tr><td class="col-name">gd15_trend</td><td class="col-type">NUMERIC(6,4)</td></tr>
+          <tr><td class="col-name">inter_game_minutes</td><td class="col-type">NUMERIC(6,2)</td></tr>
+          <tr><td class="col-name">tilt_score</td><td class="col-type">NUMERIC(4,3)</td></tr>
+          <tr><td class="col-name">tilt_label</td><td class="col-type">BOOLEAN</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="schema-block">
+      <div class="schema-title">TABLE: ml_predictions</div>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name">id</td><td class="col-type">UUID PK</td></tr>
+          <tr><td class="col-fk">puuid</td><td class="col-type">VARCHAR FK</td></tr>
+          <tr><td class="col-name">model_type</td><td class="col-type">VARCHAR(20)</td></tr>
+          <tr><td class="col-name">input_features</td><td class="col-type">JSONB</td></tr>
+          <tr><td class="col-name">prediction</td><td class="col-type">NUMERIC(5,4)</td></tr>
+          <tr><td class="col-name">confidence</td><td class="col-type">NUMERIC(5,4)</td></tr>
+          <tr><td class="col-name">model_version</td><td class="col-type">VARCHAR(10)</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">✦ TIP</span>
+    <p>Run <code>SELECT create_hypertable('match_timeline_frames', 'frame_timestamp');</code> immediately after creating the table. Add a composite index on <code>(match_id, participant_id, minute)</code> — this covers 95% of all ML feature extraction queries.</p>
+  </div>
+</div>
+
+
+<!-- SECTION 4: ML -->
+<div class="section" id="ml">
+  <h2><span class="section-num">04</span>Machine Learning Strategy</h2>
+
+  <div class="ml-card">
+    <div class="ml-card-header">
+      <div class="ml-card-title">Model 1 — Tilt Detection</div>
+      <div class="ml-badge" style="background:rgba(232,82,60,0.1);border:1px solid rgba(232,82,60,0.4);color:#E8523C;">XGBClassifier</div>
+    </div>
+    <div class="ml-card-body">
+      <p><strong style="color:#F0E6C8">Concept:</strong> Compute a rolling window of features from a player's last N games and predict the probability they are currently "tilted" — defined as a mental state leading to continued performance degradation.</p>
+
+      <h3 class="sub">Ground Truth Labeling Strategy</h3>
+      <p>This is the hardest part. You have two options:</p>
+      <p><strong style="color:#F0E6C8">Option A (Self-supervised):</strong> Label historical windows as tilt=1 when: (a) 3+ consecutive losses AND (b) KDA in the final 3 games is ≥20% below the player's personal baseline. This is objective and reproducible.</p>
+      <p><strong style="color:#F0E6C8">Option B (User-labeled):</strong> Add a "Was this a tilt session?" button to the UI. Collect ~200 labeled sessions per user, then fine-tune a personalized model. Better accuracy, requires user engagement.</p>
+      <p>Start with Option A for MVP. It generates labels from data you already have.</p>
+
+      <h3 class="sub">Feature Set (per 10-game rolling window)</h3>
+      <div class="feature-row">
+        <span class="feature-pill important">consecutive_losses</span>
+        <span class="feature-pill important">kda_slope</span>
+        <span class="feature-pill important">death_count_trend</span>
+        <span class="feature-pill important">gd_at_15_trend</span>
+        <span class="feature-pill">inter_game_interval_mean</span>
+        <span class="feature-pill">inter_game_interval_min</span>
+        <span class="feature-pill">vision_score_slope</span>
+        <span class="feature-pill">cs_per_min_slope</span>
+        <span class="feature-pill">game_duration_trend</span>
+        <span class="feature-pill">champion_variety</span>
+        <span class="feature-pill">hours_since_last_win</span>
+        <span class="feature-pill">total_games_today</span>
+      </div>
+
+<pre><span class="cm"># feature_engineering/tilt.py</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy.stats <span class="kw">import</span> linregress
+
+<span class="kw">def</span> <span class="fn">extract_tilt_features</span>(recent_games: list[dict]) -> dict:
+    <span class="st">"""recent_games: last 10 match_participants rows, sorted desc by game_start"""</span>
+    
+    kda_series     = [g[<span class="st">'kills'</span>]+g[<span class="st">'assists'</span>] / max(g[<span class="st">'deaths'</span>],<span class="num">1</span>) <span class="kw">for</span> g <span class="kw">in</span> recent_games]
+    death_series   = [g[<span class="st">'deaths'</span>] <span class="kw">for</span> g <span class="kw">in</span> recent_games]
+    gd15_series    = [g.get(<span class="st">'gd_at_15'</span>, <span class="num">0</span>) <span class="kw">for</span> g <span class="kw">in</span> recent_games]
+    starts         = [g[<span class="st">'game_start_epoch'</span>] <span class="kw">for</span> g <span class="kw">in</span> recent_games]
+    
+    x = np.<span class="fn">arange</span>(<span class="fn">len</span>(recent_games))
+    
+    <span class="cm"># Linear regression slopes as trend features</span>
+    kda_slope,   *_ = <span class="fn">linregress</span>(x, kda_series)
+    death_slope, *_ = <span class="fn">linregress</span>(x, death_series)
+    gd15_slope,  *_ = <span class="fn">linregress</span>(x, gd15_series)
+    
+    <span class="cm"># Time between games (minutes)</span>
+    intervals = [(starts[i]-starts[i+<span class="num">1</span>])/<span class="num">60</span> <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(starts)-<span class="num">1</span>)]
+    
+    consecutive_losses = <span class="num">0</span>
+    <span class="kw">for</span> g <span class="kw">in</span> recent_games:
+        <span class="kw">if not</span> g[<span class="st">'won'</span>]: consecutive_losses += <span class="num">1</span>
+        <span class="kw">else</span>: <span class="kw">break</span>
+    
+    <span class="kw">return</span> {
+        <span class="st">'consecutive_losses'</span>:    consecutive_losses,
+        <span class="st">'kda_slope'</span>:             kda_slope,
+        <span class="st">'death_trend'</span>:           death_slope,
+        <span class="st">'gd15_trend'</span>:            gd15_slope,
+        <span class="st">'inter_game_mean_mins'</span>:  np.<span class="fn">mean</span>(intervals) <span class="kw">if</span> intervals <span class="kw">else</span> <span class="num">0</span>,
+        <span class="st">'inter_game_min_mins'</span>:   np.<span class="fn">min</span>(intervals)  <span class="kw">if</span> intervals <span class="kw">else</span> <span class="num">0</span>,
+        <span class="st">'champ_variety'</span>:         <span class="fn">len</span>(<span class="fn">set</span>(g[<span class="st">'champion_id'</span>] <span class="kw">for</span> g <span class="kw">in</span> recent_games)),
+    }</pre>
+
+      <h3 class="sub">Training Pipeline</h3>
+<pre><span class="kw">from</span> xgboost <span class="kw">import</span> XGBClassifier
+<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> StratifiedKFold, cross_val_score
+
+pipeline = <span class="fn">Pipeline</span>([
+    (<span class="st">'scaler'</span>, <span class="fn">StandardScaler</span>()),
+    (<span class="st">'clf'</span>, <span class="fn">XGBClassifier</span>(
+        n_estimators=<span class="num">200</span>, max_depth=<span class="num">4</span>,
+        learning_rate=<span class="num">0.05</span>, subsample=<span class="num">0.8</span>,
+        scale_pos_weight=<span class="num">3</span>,   <span class="cm"># tilt events are rare — compensate class imbalance</span>
+        use_label_encoder=<span class="kw">False</span>, eval_metric=<span class="st">'logloss'</span>
+    ))
+])
+
+cv = <span class="fn">StratifiedKFold</span>(n_splits=<span class="num">5</span>, shuffle=<span class="kw">True</span>)
+scores = <span class="fn">cross_val_score</span>(pipeline, X, y, cv=cv, scoring=<span class="st">'roc_auc'</span>)
+<span class="cm"># Target: AUC > 0.72 on held-out data</span></pre>
+    </div>
+  </div>
+
+  <div class="ml-card" style="margin-top:24px">
+    <div class="ml-card-header">
+      <div class="ml-card-title">Model 2 — Draft Win Probability</div>
+      <div class="ml-badge" style="background:rgba(155,114,207,0.1);border:1px solid rgba(155,114,207,0.4);color:#9B72CF;">XGBClassifier</div>
+    </div>
+    <div class="ml-card-body">
+      <p><strong style="color:#F0E6C8">Concept:</strong> Given the 10 champion picks (5v5) and the target player's historical performance on their champion, predict the probability of winning the game before it starts.</p>
+      <p><strong style="color:#F0E6C8">Key insight:</strong> Encode team compositions as aggregated semantic scores (poke, engage, teamfight, peel, split), NOT raw one-hot champion vectors. 168+ champions makes one-hot sparse and patch-sensitive. Semantic scores are patch-resilient.</p>
+
+      <h3 class="sub">Feature Engineering</h3>
+      <div class="feature-row">
+        <span class="feature-pill important">player_champ_winrate_20g</span>
+        <span class="feature-pill important">player_champ_kda_20g</span>
+        <span class="feature-pill important">ally_teamfight_score</span>
+        <span class="feature-pill important">enemy_teamfight_score</span>
+        <span class="feature-pill">ally_poke_score</span>
+        <span class="feature-pill">enemy_poke_score</span>
+        <span class="feature-pill">ally_engage_score</span>
+        <span class="feature-pill">matchup_historical_delta</span>
+        <span class="feature-pill">ally_avg_mastery</span>
+        <span class="feature-pill">game_version_encoded</span>
+        <span class="feature-pill">player_games_on_champ</span>
+        <span class="feature-pill">player_rank_tier</span>
+      </div>
+
+<pre><span class="cm"># Champion composition scoring — build this from CDragon champion tags</span>
+<span class="dec">COMP_TAGS</span> = {
+    <span class="st">'Engage'</span>:    [<span class="st">'Leona'</span>, <span class="st">'Malphite'</span>, <span class="st">'Amumu'</span>, <span class="st">'Jarvan IV'</span>, ...],
+    <span class="st">'Poke'</span>:      [<span class="st">'Jayce'</span>, <span class="st">'Zoe'</span>, <span class="st">'Ezreal'</span>, <span class="st">'Karma'</span>, ...],
+    <span class="st">'Teamfight'</span>: [<span class="st">'Orianna'</span>, <span class="st">'Amumu'</span>, <span class="st">'Miss Fortune'</span>, ...],
+    <span class="st">'Split'</span>:     [<span class="st">'Fiora'</span>, <span class="st">'Tryndamere'</span>, <span class="st">'Yorick'</span>, ...]
+}
+
+<span class="kw">def</span> <span class="fn">team_comp_scores</span>(champion_ids: list[int]) -> dict:
+    champions = [<span class="fn">champ_name_from_id</span>(c) <span class="kw">for</span> c <span class="kw">in</span> champion_ids]
+    <span class="kw">return</span> {
+        tag: <span class="fn">sum</span>(<span class="num">1</span> <span class="kw">for</span> c <span class="kw">in</span> champions <span class="kw">if</span> c <span class="kw">in</span> members)
+        <span class="kw">for</span> tag, members <span class="kw">in</span> <span class="dec">COMP_TAGS</span>.items()
+    }</pre>
+
+      <h3 class="sub">Training Data Requirements</h3>
+      <p>You need <strong style="color:#F0E6C8">minimum 50,000 ranked matches</strong> for a reliable model. Collect via the Riot match list API across multiple summoners. Stratify by patch version to avoid temporal leakage (don't train on patch 14.12 and test on 14.1).</p>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠ CRITICAL</span>
+        <p>Avoid target leakage. None of your draft features should contain information only available after the game starts (e.g., actual items built, real KDA). Features must be inferable purely from champion selections + historical player stats.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ml-card" style="margin-top:24px">
+    <div class="ml-card-header">
+      <div class="ml-card-title">Model 3 — Power Spike Forecasting</div>
+      <div class="ml-badge" style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.4);color:#4A9EFF;">KMeans + Regression</div>
+    </div>
+    <div class="ml-card-body">
+      <p><strong style="color:#F0E6C8">Concept:</strong> Use timeline frame data to learn the characteristic "gold curve shape" for a player on a specific champion. Then predict the minute window where a player is most likely to hold a meaningful gold advantage.</p>
+
+      <h3 class="sub">Approach</h3>
+      <p>1. For each (player, champion) pair, collect all timeline curves as arrays of gold values at minutes 5, 10, 15, 20, 25, 30.</p>
+      <p>2. Normalize curves by dividing by game-end gold (shape matters, not magnitude).</p>
+      <p>3. Apply KMeans (k=3) to identify natural clusters: "early spiker", "late scaler", "consistent grinder".</p>
+      <p>4. Within each cluster, use linear regression to predict the peak gold-advantage minute given champion + items at 10 minutes.</p>
+      <p>5. Surface this as: <em>"Based on your history, you tend to peak at minutes 18–24. Prioritize objectives in this window."</em></p>
+    </div>
+  </div>
+</div>
+
+
+<!-- SECTION 5: PHASES -->
+<div class="section" id="phases">
+  <h2><span class="section-num">05</span>Implementation Phases</h2>
+
+  <div class="phases">
+
+    <div class="phase">
+      <div class="phase-num"><div class="phase-circle">1</div></div>
+      <div class="phase-body">
+        <div class="phase-header">
+          <div class="phase-title">Foundation — Setup & Riot API</div>
+          <span class="phase-tag tag-setup">WEEKS 1–2</span>
+        </div>
+        <ul class="task-list">
+          <li>Register on Riot Developer Portal. Get a Production API key (requires publishing a working prototype). Start with the Development key (100 req/2min).</li>
+          <li>Stand up the monorepo: <code>/frontend</code> (Next.js), <code>/backend</code> (FastAPI), <code>/ml</code> (Jupyter + training scripts), <code>/infra</code> (Docker Compose).</li>
+          <li>Write Pydantic models for Riot DTO shapes: <code>SummonerDTO</code>, <code>MatchDTO</code>, <code>ParticipantDTO</code>, <code>TimelineDTO</code>.</li>
+          <li>Implement the <code>RiotClient</code> class with async httpx, regional routing (americas/europe/asia clusters), and per-route endpoint logic.</li>
+          <li>Initialize PostgreSQL schema + TimescaleDB extension. Run <code>create_hypertable</code>. Write Alembic migration files.</li>
+          <li>Write the Redis token-bucket rate limiter. Test it under load with <code>locust</code>.</li>
+          <li>Build a CLI script: <code>python ingest.py --summoner "PlayerName#TAG" --region na1 --count 50</code> that works end-to-end.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-num"><div class="phase-circle">2</div></div>
+      <div class="phase-body">
+        <div class="phase-header">
+          <div class="phase-title">Data Pipeline — Celery + Background Ingestion</div>
+          <span class="phase-tag tag-data">WEEKS 3–4</span>
+        </div>
+        <ul class="task-list">
+          <li>Set up Celery with Redis broker + results backend. Configure <code>celery.conf.task_routes</code> to separate ingestion queues by priority.</li>
+          <li>Implement <code>ingest_match</code>, <code>ingest_summoner_matches</code>, <code>refresh_summoner</code> tasks. Add idempotency: check if <code>match_id</code> exists before fetching.</li>
+          <li>Celery Beat schedule: refresh tracked summoners every 6 hours. Use exponential backoff on 429 Riot rate-limit responses.</li>
+          <li>Write database utility functions: <code>upsert_match()</code>, <code>upsert_timeline_frames()</code> using PostgreSQL <code>ON CONFLICT DO UPDATE</code>.</li>
+          <li>Add computed columns on insert: <code>cs_per_min</code>, <code>damage_share</code>, <code>kill_participation</code> — calculate these in Python before DB write, not as SQL triggers.</li>
+          <li>Build a Flower monitoring endpoint for the queue. Verify timeline data is correctly written into the hypertable with a TimescaleDB time-bucket query.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-num"><div class="phase-circle">3</div></div>
+      <div class="phase-body">
+        <div class="phase-header">
+          <div class="phase-title">Core Dashboard — Next.js UI + Basic Stats</div>
+          <span class="phase-tag tag-ui">WEEKS 5–7</span>
+        </div>
+        <ul class="task-list">
+          <li>Build the summoner search page with a debounced autocomplete input that calls <code>GET /api/summoners/search?q=...</code>. Show profile icon, level, rank.</li>
+          <li>Build the main profile page: ranked stats overview, recent 20 games list with champion icons, KDA, result, and CS.</li>
+          <li>Implement champion statistics table: sortable by games, winrate, KDA, CS/min. Add a champion mastery heatmap using D3.</li>
+          <li>KDA over time line chart using Recharts. Add a date-range brush component for filtering. Show the player's personal baseline as a reference line.</li>
+          <li>Win rate by champion (bar chart) with minimum games filter. Add a "performance vs rank" scatter plot: KDA on X, win rate on Y, dot size = games played.</li>
+          <li>Implement Redis caching in FastAPI: <code>@cache(ttl=300)</code> decorator on all read endpoints. Profile page should load in &lt;200ms for cached data.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-num"><div class="phase-circle">4</div></div>
+      <div class="phase-body">
+        <div class="phase-header">
+          <div class="phase-title">Advanced Analytics — Deep Match Insights</div>
+          <span class="phase-tag tag-analytics">WEEKS 8–10</span>
+        </div>
+        <ul class="task-list">
+          <li><strong style="color:#F0E6C8">Gold curve comparison:</strong> Query <code>match_timeline_frames</code> and plot average gold-per-minute vs. position average and top-rank average. Use D3 area charts with brushable time range.</li>
+          <li><strong style="color:#F0E6C8">Vision score impact:</strong> SQL query: group player's games into vision score quartiles. Show win rate per quartile as a bar chart. Annotate inflection point.</li>
+          <li><strong style="color:#F0E6C8">Damage share vs. gold share:</strong> Scatter plot all games. Quadrant analysis: top-right = efficient carry, bottom-left = underperforming.</li>
+          <li><strong style="color:#F0E6C8">Champion matchup matrix:</strong> For each champion the player has faced ≥5 times, show their WR against it. Build a heatmap grid using D3. Add sorting by difficulty (lowest WR first).</li>
+          <li><strong style="color:#F0E6C8">Playstyle fingerprint:</strong> Radar chart with 6 axes: Aggression (kills/min), Farming (CS/min), Vision, Objective Control (dragon/baron participation), Teamfight (KP%), Consistency (WR std dev). Compare vs. top players in same position.</li>
+          <li>Build the match detail page: full 10-player timeline view, events log (kills, objectives), gold diff graph over time.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-num"><div class="phase-circle">5</div></div>
+      <div class="phase-body">
+        <div class="phase-header">
+          <div class="phase-title">Machine Learning — Train & Serve Predictions</div>
+          <span class="phase-tag tag-ml">WEEKS 11–14</span>
+        </div>
+        <ul class="task-list">
+          <li><strong style="color:#F0E6C8">Data preparation:</strong> Write SQL + pandas pipelines to export labeled training data from your database. Ensure no data leakage between train/test splits (split by <em>time</em>, not randomly).</li>
+          <li><strong style="color:#F0E6C8">Tilt model:</strong> Train in Jupyter. Target AUC &gt; 0.72. Serialize with <code>joblib.dump(pipeline, 'tilt_v1.pkl')</code>. Add SHAP explanations so the UI can show <em>why</em> tilt is detected (e.g., "Your KDA has dropped 3 games in a row").</li>
+          <li><strong style="color:#F0E6C8">Draft model:</strong> Train on 50k+ matches. Validate on last 2 patches only. Target AUC &gt; 0.65 (random = 0.50, ceiling is ~0.70 due to game variance).</li>
+          <li><strong style="color:#F0E6C8">Power spike clustering:</strong> K-means pipeline. Validate cluster coherence with silhouette score. Map cluster IDs to human-readable labels.</li>
+          <li>Build <code>ModelRegistry</code> class in FastAPI. Load all <code>.pkl</code> files on startup. Expose: <code>POST /api/predict/tilt</code>, <code>POST /api/predict/draft</code>, <code>GET /api/predict/power-spike/{puuid}/{champion_id}</code>.</li>
+          <li>Wire predictions into the frontend. Tilt score: persistent banner with a 0–100 gauge and SHAP-generated explanation text. Draft probability: show on the new "draft analyzer" page with a team comp input UI.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-num"><div class="phase-circle">6</div></div>
+      <div class="phase-body">
+        <div class="phase-header">
+          <div class="phase-title">Production — Docker, Deploy & Monitor</div>
+          <span class="phase-tag tag-deploy">WEEKS 15–16</span>
+        </div>
+        <ul class="task-list">
+          <li>Write <code>docker-compose.yml</code> with services: <code>postgres</code>, <code>redis</code>, <code>api</code> (FastAPI), <code>worker</code> (Celery), <code>beat</code> (Celery Beat), <code>flower</code>. Use <code>healthcheck</code> directives.</li>
+          <li>Deploy backend stack to Railway (or Render). Use Railway's managed PostgreSQL with the TimescaleDB extension. Set environment variables securely.</li>
+          <li>Deploy Next.js to Vercel. Configure <code>NEXT_PUBLIC_API_URL</code> to point to Railway backend. Add rewrite rules for API proxying to avoid CORS.</li>
+          <li>Add Prometheus metrics to FastAPI (<code>prometheus-fastapi-instrumentator</code>). Track: request latency, Celery queue depth, Riot API error rates.</li>
+          <li>Set up GitHub Actions CI: lint → test (<code>pytest</code>) → Docker build → Railway deploy on merge to main.</li>
+          <li>Performance audit: ensure TimescaleDB queries with the composite index stay under 50ms. Add database connection pooling via <code>asyncpg</code> + <code>PgBouncer</code> for the Celery workers.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- SECTION 6: API REFERENCE -->
+<div class="section" id="api">
+  <h2><span class="section-num">06</span>FastAPI Endpoint Reference</h2>
+  <p>All endpoints are prefixed with <code>/api/v1</code>. Authenticated routes require a JWT from the user login flow.</p>
+
+  <div class="card">
+<pre style="margin:0;background:transparent;border:none;padding:0"><span class="cm">## Summoner Routes</span>
+<span class="dec">GET</span>  /summoners/search?q={query}&region={region}
+<span class="dec">GET</span>  /summoners/{puuid}                        → Full profile
+<span class="dec">POST</span> /summoners/{puuid}/refresh               → Trigger Celery ingest task
+
+<span class="cm">## Stats Routes (all cached 5 min)</span>
+<span class="dec">GET</span>  /summoners/{puuid}/champion-stats         → Agg by champion
+<span class="dec">GET</span>  /summoners/{puuid}/performance-trend      → KDA/WR over time
+<span class="dec">GET</span>  /summoners/{puuid}/matchup-matrix         → WR vs each enemy champ
+<span class="dec">GET</span>  /summoners/{puuid}/playstyle-fingerprint  → Radar chart data
+
+<span class="cm">## Match Routes</span>
+<span class="dec">GET</span>  /matches?puuid={puuid}&limit=20&offset=0  → Paginated match list
+<span class="dec">GET</span>  /matches/{match_id}                       → Full match detail
+<span class="dec">GET</span>  /matches/{match_id}/timeline/{puuid}      → Gold/XP curves for a player
+
+<span class="cm">## ML Prediction Routes</span>
+<span class="dec">GET</span>  /predict/tilt/{puuid}                     → Tilt score + SHAP reasons
+<span class="dec">POST</span> /predict/draft                            → Body: {ally_champs, enemy_champs, puuid, position}
+<span class="dec">GET</span>  /predict/power-spike/{puuid}/{champ_id}   → Peak minute window
+
+<span class="cm">## Analytics Routes</span>
+<span class="dec">GET</span>  /analytics/vision-impact/{puuid}          → Win rate by vision quartile
+<span class="dec">GET</span>  /analytics/gold-curves/{puuid}/{champ_id} → Timeline gold vs. averages
+<span class="dec">GET</span>  /analytics/damage-efficiency/{puuid}      → Damage share vs gold share scatter</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">✦ NEXT STEP</span>
+    <p>Start with Phase 1 today. The single biggest accelerator is getting clean data flowing early — every subsequent phase (analytics, ML, UI) depends entirely on the quality of your ingestion pipeline. Aim for 100,000+ match_participants rows before training any models.</p>
+  </div>
+</div>
+
+<footer>
+  League of Legends Advanced Analytics Dashboard — Project Blueprint<br>
+  Data from Riot Games API is used under Riot's Developer Terms of Service.<br>
+  This application is not endorsed by Riot Games.
+</footer>
+
+</body>
+</html>

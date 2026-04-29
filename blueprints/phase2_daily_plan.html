@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 2 — Daily Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500&display=swap');
+  :root {
+    --gold:#C89B3C;--gold-light:#F0E6C8;--gold-dim:#7A5C1E;
+    --bg:#0A0C10;--bg2:#111318;--bg3:#181C24;
+    --border:rgba(200,155,60,.15);--border-bright:rgba(200,155,60,.4);
+    --text:#C8C0B0;--text-dim:#5A5650;--text-bright:#F0E6C8;
+    --blue:#4A9EFF;--teal:#2ABFAA;--red:#E8523C;--purple:#9B72CF;--green:#4CAF72;--amber:#F0A830;
+    --r:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;max-width:860px;margin:0 auto;padding:40px 28px 80px;}
+
+  .hdr{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px;}
+  .hdr-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(200,155,60,.08);border:1px solid var(--border-bright);padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:14px;}
+  h1{font-family:'Syne',sans-serif;font-size:clamp(22px,4vw,36px);font-weight:800;color:var(--gold-light);letter-spacing:-.02em;line-height:1.15;margin-bottom:10px;}
+  h1 span{color:var(--gold);}
+  .hdr p{color:var(--text-dim);font-size:13px;max-width:580px;}
+
+  .phase-chain{display:flex;gap:0;margin:22px 0 0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+  .chain-item{flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border);font-family:'DM Mono',monospace;}
+  .chain-item:last-child{border-right:none;}
+  .chain-item .cn{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:3px;}
+  .chain-item .cv{font-size:12px;font-weight:500;color:var(--text-bright);}
+  .chain-item.active{background:rgba(200,155,60,.06);}
+  .chain-item.active .cv{color:var(--gold);}
+  .chain-item.done .cv{color:var(--green);}
+
+  .progress-wrap{margin:20px 0 0;}
+  .progress-label{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+  .progress-label span:last-child{color:var(--gold);}
+  .progress-track{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width .4s ease;width:0%;}
+
+  .stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;flex:1;min-width:120px;}
+  .stat .slabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:4px;}
+  .stat .sval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--gold);}
+  .stat .sval.blue{color:var(--blue);}.stat .sval.green{color:var(--green);}
+
+  .week-header{display:flex;align-items:center;gap:12px;margin:28px 0 14px;}
+  .week-pill{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:20px;border:1px solid var(--border-bright);color:var(--gold);background:rgba(200,155,60,.06);flex-shrink:0;}
+  .week-line{flex:1;height:1px;background:var(--border);}
+  .week-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);flex-shrink:0;}
+
+  .day{display:grid;grid-template-columns:56px 1fr;gap:0 16px;margin-bottom:10px;position:relative;}
+  .day:not(:last-of-type)::after{content:'';position:absolute;left:27px;top:52px;bottom:-10px;width:2px;background:var(--border);z-index:0;}
+  .day-num-wrap{display:flex;flex-direction:column;align-items:center;padding-top:2px;position:relative;z-index:1;}
+  .day-circle{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gold-dim);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);transition:all .2s;cursor:pointer;flex-shrink:0;}
+  .day-circle.done{background:rgba(200,155,60,.15);border-color:var(--gold);color:var(--gold-light);}
+  .day-circle.done::after{content:'✓';}.day-circle:not(.done)::after{content:attr(data-n);}
+
+  .day-body{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px 16px;transition:border-color .2s;}
+  .day-body:hover{border-color:rgba(200,155,60,.3);}
+  .day-body.done{opacity:.55;}
+
+  .day-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+  .day-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright);line-height:1.3;}
+  .day-meta{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+
+  .time-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);white-space:nowrap;}
+  .focus-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid;white-space:nowrap;}
+  .fp-setup{border-color:rgba(42,191,170,.3);color:var(--teal);background:rgba(42,191,170,.06);}
+  .fp-code{border-color:rgba(155,114,207,.3);color:var(--purple);background:rgba(155,114,207,.06);}
+  .fp-db{border-color:rgba(76,175,114,.3);color:var(--green);background:rgba(76,175,114,.06);}
+  .fp-test{border-color:rgba(232,82,60,.3);color:var(--red);background:rgba(232,82,60,.06);}
+  .fp-perf{border-color:rgba(240,168,48,.3);color:var(--amber);background:rgba(240,168,48,.06);}
+
+  .tasks{list-style:none;padding:0;margin:0;}
+  .tasks li{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px solid rgba(200,155,60,.05);cursor:pointer;border-radius:4px;transition:background .15s;}
+  .tasks li:last-child{border-bottom:none;}
+  .tasks li:hover{background:rgba(200,155,60,.04);}
+  .task-check{width:16px;height:16px;border:1.5px solid var(--text-dim);border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:10px;}
+  .tasks li.checked .task-check{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+  .tasks li.checked .task-check::after{content:'✓';font-weight:700;}
+  .task-text{font-size:13px;color:var(--text);line-height:1.55;}
+  .tasks li.checked .task-text{text-decoration:line-through;color:var(--text-dim);}
+
+  .deliverable{margin-top:12px;padding:10px 14px;background:var(--bg3);border-left:2px solid var(--gold-dim);border-radius:0 4px 4px 0;font-size:12px;}
+  .deliverable .dlabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:2px;}
+  .deliverable p{color:var(--text-dim);font-size:12px;margin:0;}
+
+  .snippet{margin-top:12px;background:#0D1117;border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:#C9D1D9;overflow-x:auto;}
+  .snippet .fn{color:#D2A8FF;}.snippet .kw{color:#FF7B72;}.snippet .st{color:#A5D6FF;}.snippet .cm{color:#6E7681;}.snippet .dec{color:#56D364;}.snippet .num{color:#79C0FF;}.snippet .cl{color:#FFA657;}
+
+  .callout{display:flex;gap:12px;padding:12px 16px;border-radius:var(--r);margin:12px 0;border:1px solid;font-size:13px;}
+  .callout.warn{background:rgba(200,155,60,.06);border-color:var(--border-bright);color:var(--gold);}
+  .callout.info{background:rgba(74,158,255,.06);border-color:rgba(74,158,255,.25);color:#7BB8FF;}
+  .callout.tip{background:rgba(76,175,114,.06);border-color:rgba(76,175,114,.25);color:#7EC89A;}
+  .callout-icon{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;flex-shrink:0;padding-top:1px;}
+  .callout p{margin:0;color:inherit;font-size:13px;}
+
+  .arch-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+  @media(max-width:600px){.arch-row{grid-template-columns:1fr;}}
+  .arch-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;}
+  .arch-box .abl{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:4px;}
+  .arch-box .abt{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text-bright);margin-bottom:4px;}
+  .arch-box p{font-size:12px;color:var(--text-dim);margin:0;line-height:1.5;}
+
+  footer{margin-top:48px;border-top:1px solid var(--border);padding-top:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-tag">◆ Phase 2 of 6 — Data Pipeline</div>
+  <h1>Celery Workers &<br><span>Background Ingestion</span></h1>
+  <p>12 evenings @ 1–2 hrs each. Goal: replace the manual CLI script with a fully automated, rate-limited, fault-tolerant background pipeline that runs continuously without you touching it.</p>
+
+  <div class="phase-chain">
+    <div class="chain-item done"><div class="cn">Phase 1</div><div class="cv">✓ Foundation</div></div>
+    <div class="chain-item active"><div class="cn">Phase 2</div><div class="cv">→ Pipeline</div></div>
+    <div class="chain-item"><div class="cn">Phase 3</div><div class="cv">UI / Dashboard</div></div>
+    <div class="chain-item"><div class="cn">Phase 4</div><div class="cv">Analytics</div></div>
+    <div class="chain-item"><div class="cn">Phase 5</div><div class="cv">ML Models</div></div>
+    <div class="chain-item"><div class="cn">Phase 6</div><div class="cv">Deploy</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Progress</span><span id="pct-label">0 / 12 days complete</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="slabel">Total Days</div><div class="sval">12</div></div>
+  <div class="stat"><div class="slabel">Est. Hours</div><div class="sval blue">18–24 hrs</div></div>
+  <div class="stat"><div class="slabel">Tasks Done</div><div class="sval green" id="tasks-done">0</div></div>
+  <div class="stat"><div class="slabel">Phase End</div><div class="sval" style="font-size:14px;padding-top:3px" id="end-date">—</div></div>
+</div>
+
+
+<!-- WEEK 1 -->
+<div class="week-header">
+  <span class="week-pill">Week 1</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 1–5 · Celery App + Core Tasks</span>
+</div>
+
+<!-- DAY 1 -->
+<div class="day" id="day-1">
+  <div class="day-num-wrap"><div class="day-circle" data-n="1" onclick="toggleDay(1)"></div></div>
+  <div class="day-body" id="body-1">
+    <div class="day-top">
+      <div class="day-title">Celery App Factory + Worker Config</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/worker/celery_app.py</code>. Instantiate <code>Celery('lol_dashboard')</code> and configure it with <code>broker_url = settings.redis_url</code> and <code>result_backend = settings.redis_url</code>. Keep this file minimal — it's the entry point only.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Set these Celery config values explicitly: <code>task_serializer='json'</code>, <code>result_serializer='json'</code>, <code>accept_content=['json']</code>, <code>task_track_started=True</code>, <code>task_acks_late=True</code>. The last two are critical — they prevent tasks from disappearing silently on worker crash.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Configure <code>task_routes</code> to separate workloads into two queues: <code>'worker.tasks.ingest.*'</code> → queue <code>'ingestion'</code> and <code>'worker.tasks.refresh.*'</code> → queue <code>'refresh'</code>. This lets you scale ingestion workers independently later.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add the Celery worker service to <code>docker-compose.yml</code>: same image as the API, command <code>celery -A worker.celery_app worker -Q ingestion,refresh --loglevel=info --concurrency=2</code>. Add <code>depends_on: [redis, postgres]</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Smoke test: create a throwaway task <code>@app.task def ping(): return "pong"</code>, run the worker with <code>docker compose up worker</code>, then from a Python shell call <code>ping.delay()</code> and verify you see it execute in the worker logs.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 1 Deliverable</div>
+      <p>Celery worker container starts cleanly and processes a <code>ping</code> task. You see <code>Task worker.tasks.ping succeeded</code> in the worker logs.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 2 -->
+<div class="day" id="day-2">
+  <div class="day-num-wrap"><div class="day-circle" data-n="2" onclick="toggleDay(2)"></div></div>
+  <div class="day-body" id="body-2">
+    <div class="day-top">
+      <div class="day-title">The <code>ingest_match</code> Task — Core Unit of Work</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Code</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/worker/tasks/ingest.py</code>. Write the <code>ingest_match</code> task using <code>@shared_task(bind=True)</code>. The <code>bind=True</code> gives you access to <code>self</code>, which you need for retry logic.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">The task body: (1) check if <code>match_id</code> already in DB — return early if so, (2) call <code>rate_limiter.acquire(region)</code>, (3) fetch match + timeline via <code>RiotClient</code>, (4) validate with DTOs, (5) write to DB via your Phase 1 upsert ops, (6) commit. Wrap steps 2–5 in a single <code>try/except</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Handle the three Riot error cases explicitly: <code>404</code> (match doesn't exist — log a warning and return, do NOT retry), <code>429</code> (rate limited — retry after 30s), <code>5xx</code> (Riot server error — retry after 60s, max 3 times).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Celery tasks must be synchronous functions — you cannot use <code>async def</code> with a standard Celery worker. Wrap your async DB calls with <code>asyncio.get_event_loop().run_until_complete()</code>, or better: use <code>gevent</code> pool. For now, convert your DB upsert ops to sync SQLAlchemy (not async) inside the task context.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test it: manually call <code>ingest_match.delay("NA1_some_match_id", "na1")</code> from a Python shell. Watch the worker logs. Verify the match lands in Postgres.</span></li>
+    </ul>
+    <div class="callout warn">
+      <span class="callout-icon">⚠</span>
+      <p>Celery tasks are synchronous by default. Do not use <code>async def</code> here — it won't work as you expect. Keep the task sync and call any async helpers through <code>asyncio.run()</code> or restructure your DB ops to have sync versions.</p>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 2 Deliverable</div>
+      <p><code>ingest_match.delay("real_match_id", "na1")</code> executes in the worker and stores the match in Postgres. Running it twice on the same match skips cleanly on the second call.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day" id="day-3">
+  <div class="day-num-wrap"><div class="day-circle" data-n="3" onclick="toggleDay(3)"></div></div>
+  <div class="day-body" id="body-3">
+    <div class="day-top">
+      <div class="day-title">The <code>ingest_summoner_matches</code> Task — Batch Dispatch</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Code</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>ingest_summoner_matches</code> task. Its job is NOT to fetch match data — it's an orchestrator. It: (1) fetches the match ID list from Riot, (2) filters out match IDs already in the DB, (3) dispatches one <code>ingest_match</code> subtask per new match ID.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Use <code>ingest_match.apply_async(args=[match_id, region], countdown=i*3)</code> for each dispatch — the <code>countdown=i*3</code> staggers the tasks 3 seconds apart. This is your second line of defense against rate limit bursts (the Redis limiter is the first).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Accept a <code>since_match_id</code> optional param — when provided, only fetch match IDs newer than this cursor. This is how incremental syncing works: you don't re-fetch 500 old matches every time, just the new ones since the last sync.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">After dispatching all subtasks, update <code>summoner.match_history_cursor</code> in the DB with the newest match ID in the batch. This cursor is what the next sync will use.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test: call <code>ingest_summoner_matches.delay("puuid-here", "na1", count=10)</code>. Verify in the worker logs that 10 <code>ingest_match</code> sub-tasks get dispatched with staggered countdown values. Verify they all complete and hit the DB.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># The orchestrator pattern — dispatch, don't execute</span>
+<span class="dec">@shared_task</span>(bind=<span class="kw">True</span>)
+<span class="kw">def</span> <span class="fn">ingest_summoner_matches</span>(self, puuid: str, region: str,
+                              count: int = <span class="num">20</span>, queue: int = <span class="num">420</span>):
+    match_ids = riot_client.<span class="fn">get_match_ids_sync</span>(puuid, region, count, queue)
+    existing  = db.<span class="fn">get_existing_match_ids</span>(<span class="fn">set</span>(match_ids))
+    new_ids   = [m <span class="kw">for</span> m <span class="kw">in</span> match_ids <span class="kw">if</span> m <span class="kw">not in</span> existing]
+
+    <span class="kw">for</span> i, match_id <span class="kw">in</span> <span class="fn">enumerate</span>(new_ids):
+        <span class="fn">ingest_match</span>.<span class="fn">apply_async</span>(
+            args=[match_id, region],
+            countdown=i * <span class="num">3</span>,           <span class="cm"># stagger 3s apart</span>
+            queue=<span class="st">'ingestion'</span>
+        )
+
+    <span class="kw">if</span> new_ids:
+        db.<span class="fn">update_match_cursor</span>(puuid, new_ids[<span class="num">0</span>])  <span class="cm"># newest first</span>
+
+    <span class="kw">return</span> {<span class="st">'dispatched'</span>: <span class="fn">len</span>(new_ids), <span class="st">'skipped'</span>: <span class="fn">len</span>(existing)}
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 3 Deliverable</div>
+      <p>One <code>ingest_summoner_matches</code> call fans out into 10 staggered <code>ingest_match</code> sub-tasks, all completing successfully. The summoner's cursor updates in the DB.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day" id="day-4">
+  <div class="day-num-wrap"><div class="day-circle" data-n="4" onclick="toggleDay(4)"></div></div>
+  <div class="day-body" id="body-4">
+    <div class="day-top">
+      <div class="day-title">The <code>refresh_summoner</code> Task + Onboarding Hook</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-code">Code</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>refresh_summoner</code> task. Its job: (1) call <code>GET /lol/summoner/v4</code> to refresh the summoner's profile data (level, icon — these can change), (2) upsert the summoner row, (3) dispatch <code>ingest_summoner_matches</code> with <code>since_match_id</code> set to the stored cursor so only new games get ingested.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write a separate <code>onboard_summoner</code> task for first-time lookups. This one has no cursor, so it fetches the last 100 matches (Riot's maximum per request) and dispatches all of them. This is only ever called once per summoner.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Wire the <code>onboard_summoner</code> task to your FastAPI endpoint: when <code>POST /api/v1/summoners/search</code> is called with a name that doesn't exist in the DB yet, call <code>onboard_summoner.delay(game_name, tag_line, region)</code> and immediately return a <code>202 Accepted</code> response with a task ID. The client polls for completion.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a <code>GET /api/v1/tasks/{task_id}</code> endpoint that checks Celery's result backend for task status. Return <code>{"status": "PENDING" | "STARTED" | "SUCCESS" | "FAILURE", "result": ...}</code>. This is how the frontend will show a loading state during onboarding.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 4 Deliverable</div>
+      <p>Searching a brand-new summoner via the API returns <code>202</code> + a task ID. Polling <code>/tasks/{id}</code> shows the status going from <code>PENDING</code> → <code>STARTED</code> → <code>SUCCESS</code> as the worker ingests their matches.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 5 -->
+<div class="day" id="day-5">
+  <div class="day-num-wrap"><div class="day-circle" data-n="5" onclick="toggleDay(5)"></div></div>
+  <div class="day-body" id="body-5">
+    <div class="day-top">
+      <div class="day-title">Celery Beat — Automatic Periodic Refresh</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a <code>beat</code> service to <code>docker-compose.yml</code>: same image as the worker, command <code>celery -A worker.celery_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler</code>. Actually, for simplicity: use the built-in <code>beat_schedule</code> config dict instead of the DB scheduler — no extra dependencies needed.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">In <code>celery_app.py</code>, set <code>app.conf.beat_schedule</code> with one entry: <code>'refresh-all-summoners'</code> runs every 6 hours via <code>crontab(hour='*/6')</code>. This task will query the DB for all tracked summoners and dispatch a <code>refresh_summoner</code> task for each.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write the <code>refresh_all_tracked_summoners</code> periodic task. It queries <code>SELECT puuid, region FROM summoners WHERE last_updated &lt; NOW() - INTERVAL '6 hours'</code>, then dispatches <code>refresh_summoner.apply_async(args=[puuid, region], queue='refresh')</code> for each result. Stagger with <code>countdown=i*10</code> to avoid a thundering herd.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Start the beat service: <code>docker compose up beat</code>. For testing, temporarily change the schedule to run every 2 minutes (use <code>crontab(minute='*/2')</code>). Verify in logs that <code>refresh_all_tracked_summoners</code> fires and dispatches jobs. Then revert to 6 hours.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># celery_app.py — beat schedule config</span>
+<span class="kw">from</span> celery.schedules <span class="kw">import</span> crontab
+
+app.conf.beat_schedule = {
+    <span class="st">'refresh-all-summoners'</span>: {
+        <span class="st">'task'</span>:     <span class="st">'worker.tasks.refresh.refresh_all_tracked_summoners'</span>,
+        <span class="st">'schedule'</span>: <span class="fn">crontab</span>(hour=<span class="st">'*/6'</span>, minute=<span class="st">'0'</span>),
+        <span class="st">'options'</span>:  {<span class="st">'queue'</span>: <span class="st">'refresh'</span>},
+    },
+}
+app.conf.timezone = <span class="st">'UTC'</span>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 5 Deliverable</div>
+      <p>Beat service fires <code>refresh_all_tracked_summoners</code> on schedule. Worker picks up the dispatched refresh jobs and processes them. The pipeline now runs entirely without manual intervention.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 2 -->
+<div class="week-header">
+  <span class="week-pill">Week 2</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 6–10 · Resilience, Performance & Monitoring</span>
+</div>
+
+<!-- DAY 6 -->
+<div class="day" id="day-6">
+  <div class="day-num-wrap"><div class="day-circle" data-n="6" onclick="toggleDay(6)"></div></div>
+  <div class="day-body" id="body-6">
+    <div class="day-top">
+      <div class="day-title">Retry Logic + Dead Letter Handling</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Code</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement exponential backoff on <code>ingest_match</code>. Use <code>self.retry(exc=exc, countdown=2 ** self.request.retries * 30)</code>. So retry 1 waits 30s, retry 2 waits 60s, retry 3 waits 120s. Set <code>max_retries=3</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Handle Riot's 429 specifically: read the <code>Retry-After</code> header from the response and use that value as the <code>countdown</code> instead of your exponential value. Riot tells you exactly how long to wait — use that signal.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">After <code>max_retries</code> is exceeded, Celery raises <code>MaxRetriesExceededError</code>. Catch this in a task <code>on_failure</code> callback and write the failed match ID + error reason to a <code>failed_ingestions</code> table in the DB. This is your dead letter queue — a permanent record of what failed and why.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create the <code>failed_ingestions</code> table via a new Alembic migration: columns <code>match_id</code>, <code>region</code>, <code>error_type</code>, <code>error_message</code>, <code>attempts</code>, <code>failed_at</code>. Add an Alembic migration and run it.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write a <code>retry_failed_ingestions</code> periodic task (runs daily at 3am via Beat) that reads from <code>failed_ingestions</code> and re-dispatches them. Cap at 7 days old — failures older than that are probably permanently gone from Riot's API.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 6 Deliverable</div>
+      <p>Simulate a failure by temporarily breaking your Riot API key. Watch tasks retry with exponential backoff and ultimately land in <code>failed_ingestions</code>. Restore the key, run <code>retry_failed_ingestions</code>, watch them succeed and get removed from the failed table.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 7 -->
+<div class="day" id="day-7">
+  <div class="day-num-wrap"><div class="day-circle" data-n="7" onclick="toggleDay(7)"></div></div>
+  <div class="day-body" id="body-7">
+    <div class="day-top">
+      <div class="day-title">Bulk Insert Optimization — Timeline Frames</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-perf">Performance</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Profile your current timeline insertion. Add timing logs around <code>upsert_timeline_frames</code>. A match with 30 minute frames × 10 participants = 300 rows. One-by-one inserts will take 300+ roundtrips — this is the biggest performance bottleneck in the whole pipeline.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Rewrite <code>upsert_timeline_frames</code> to use a single bulk insert: build a list of 300 dicts in Python, then call <code>session.execute(insert(MatchTimelineFrame), rows_list)</code>. SQLAlchemy translates this to a single multi-row <code>INSERT</code>. This should be 20–50× faster.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>ON CONFLICT DO NOTHING</code> to the bulk insert so re-ingesting a match doesn't fail — it just silently skips existing rows. Use SQLAlchemy's <code>insert(...).on_conflict_do_nothing(index_elements=['match_id', 'participant_id', 'frame_timestamp'])</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Do the same optimization for <code>upsert_participants</code> — build a batch list and insert all 10 participants in one statement.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Re-run the timing logs. Target: full match ingestion (match + participants + 300 timeline frames) completes in under 200ms DB time.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># BEFORE — 300 individual inserts (slow)</span>
+<span class="kw">for</span> frame <span class="kw">in</span> timeline_frames:
+    session.<span class="fn">add</span>(<span class="cl">MatchTimelineFrame</span>(**frame))
+
+<span class="cm"># AFTER — 1 bulk insert (fast)</span>
+<span class="kw">from</span> sqlalchemy.dialects.postgresql <span class="kw">import</span> insert
+
+stmt = <span class="fn">insert</span>(<span class="cl">MatchTimelineFrame</span>).<span class="fn">values</span>(timeline_frames)
+stmt = stmt.<span class="fn">on_conflict_do_nothing</span>(
+    index_elements=[<span class="st">'match_id'</span>, <span class="st">'participant_id'</span>, <span class="st">'frame_timestamp'</span>]
+)
+session.<span class="fn">execute</span>(stmt)
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 7 Deliverable</div>
+      <p>Ingesting a single match logs <code>timeline insert: 18ms</code> or similar — a dramatic improvement. Re-ingesting the same match is a no-op with no errors.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 8 -->
+<div class="day" id="day-8">
+  <div class="day-num-wrap"><div class="day-circle" data-n="8" onclick="toggleDay(8)"></div></div>
+  <div class="day-body" id="body-8">
+    <div class="day-top">
+      <div class="day-title">Flower Monitoring Dashboard</div>
+      <div class="day-meta"><span class="time-pill">~1 hr</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a <code>flower</code> service to <code>docker-compose.yml</code>: <code>image: mher/flower</code>, command <code>celery -A worker.celery_app flower --port=5555</code>, ports <code>5555:5555</code>. Install <code>flower</code> in your <code>requirements.txt</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Start it: <code>docker compose up flower</code>. Open <code>http://localhost:5555</code>. You should see your worker, the two queues (<code>ingestion</code>, <code>refresh</code>), and task history. Spend 5 minutes exploring the UI — this is your ops dashboard for the whole project.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Dispatch 20 <code>ingest_match</code> tasks at once and watch them flow through Flower in real time. Verify the task state transitions: <code>PENDING → RECEIVED → STARTED → SUCCESS</code>. Check the timing on each task.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add basic auth to Flower so it's not open to everyone: <code>--basic_auth=admin:yourpassword</code> in the command. Store the credentials in your <code>.env</code> file.</span></li>
+    </ul>
+    <div class="callout tip">
+      <span class="callout-icon">✦</span>
+      <p>Flower is the most underrated tool in the Celery ecosystem. During development, keep it open in a browser tab at all times. You can instantly see if tasks are stacking up (queue depth), failing silently, or taking longer than expected — without digging through logs.</p>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 8 Deliverable</div>
+      <p>Flower UI accessible at <code>localhost:5555</code> behind basic auth. Task history shows your last 20 ingestion tasks with timing and status.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 9 -->
+<div class="day" id="day-9">
+  <div class="day-num-wrap"><div class="day-circle" data-n="9" onclick="toggleDay(9)"></div></div>
+  <div class="day-body" id="body-9">
+    <div class="day-top">
+      <div class="day-title">FastAPI Endpoints — Trigger & Status</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Code</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Upgrade <code>POST /api/v1/summoners/search</code>: if summoner doesn't exist in DB, call <code>onboard_summoner.delay()</code> and return <code>202 Accepted</code> with body <code>{"task_id": "...", "status": "onboarding"}</code>. If summoner already exists, return <code>200</code> with their data immediately.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement <code>GET /api/v1/tasks/{task_id}/status</code>. Use <code>celery_app.AsyncResult(task_id)</code> to get state. Map Celery states to user-friendly messages: <code>PENDING</code> → <code>"Fetching summoner data..."</code>, <code>STARTED</code> → <code>"Ingesting match history..."</code>, <code>SUCCESS</code> → <code>"Ready"</code>, <code>FAILURE</code> → <code>"Error — please try again"</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>POST /api/v1/summoners/{puuid}/refresh</code> endpoint for manual refresh triggers. This is what the frontend "Refresh" button will call. Return <code>202</code> with a task ID. Rate-limit this endpoint in FastAPI: max 1 refresh per summoner per 5 minutes (use Redis as the limiter).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a <code>GET /api/v1/summoners/{puuid}/ingestion-status</code> endpoint that returns: <code>{"total_matches": 150, "last_ingested": "2024-01-15T...", "pending_tasks": 3}</code>. The <code>pending_tasks</code> count queries Celery's inspect API for active/reserved tasks tagged with this puuid.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 9 Deliverable</div>
+      <p>Full onboarding flow works via API: search → 202 → poll status → 200 ready. Test it end-to-end with a summoner you haven't ingested before. The whole thing should complete in 5–10 minutes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 10 -->
+<div class="day" id="day-10">
+  <div class="day-num-wrap"><div class="day-circle" data-n="10" onclick="toggleDay(10)"></div></div>
+  <div class="day-body" id="body-10">
+    <div class="day-top">
+      <div class="day-title">Response Caching with Redis</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-perf">Performance</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write a <code>cache</code> decorator in <code>backend/utils/cache.py</code>. It takes a <code>ttl</code> (seconds) and a <code>key_prefix</code>. On a cache hit it returns the Redis value deserialized from JSON. On a miss it calls the underlying function, serializes the result to JSON, stores it in Redis with <code>SETEX</code>, and returns the result.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Apply <code>@cache(ttl=300, key="summoner:{puuid}")</code> to the summoner profile endpoint. Apply <code>@cache(ttl=300, key="matches:{puuid}:{page}")</code> to the match list endpoint. These are the two most-called endpoints and benefit most from caching.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement cache invalidation: when a summoner's data is refreshed (new matches ingested), call <code>redis.delete(f"summoner:{puuid}")</code> and use <code>redis.scan_match(f"matches:{puuid}:*")</code> to wipe all their match list pages. Do this at the end of the <code>refresh_summoner</code> task.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Verify caching works: hit a summoner endpoint twice and log the timing. First call should hit the DB (50–100ms). Second call should return from Redis (&lt;5ms). Log <code>CACHE HIT</code> and <code>CACHE MISS</code> at DEBUG level.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># utils/cache.py — simple Redis cache decorator</span>
+<span class="kw">import</span> json, functools
+<span class="kw">from</span> config <span class="kw">import</span> redis_client
+
+<span class="kw">def</span> <span class="fn">cache</span>(ttl: int, key: str):
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        <span class="dec">@functools.wraps</span>(func)
+        <span class="kw">async def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            cache_key = key.<span class="fn">format</span>(**kwargs)
+            cached = <span class="kw">await</span> redis_client.<span class="fn">get</span>(cache_key)
+            <span class="kw">if</span> cached:
+                <span class="kw">return</span> json.<span class="fn">loads</span>(cached)
+            result = <span class="kw">await</span> <span class="fn">func</span>(*args, **kwargs)
+            <span class="kw">await</span> redis_client.<span class="fn">setex</span>(cache_key, ttl, json.<span class="fn">dumps</span>(result))
+            <span class="kw">return</span> result
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 10 Deliverable</div>
+      <p>Cached endpoints return in &lt;5ms on the second hit. Cache invalidates correctly after a refresh — the third call goes back to the DB and re-populates the cache.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- BUFFER -->
+<div class="week-header" style="margin-top:12px">
+  <span class="week-pill">Buffer</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 11–12 · Scale Test + Phase 3 Prep</span>
+</div>
+
+<!-- DAY 11 -->
+<div class="day" id="day-11">
+  <div class="day-num-wrap"><div class="day-circle" data-n="11" onclick="toggleDay(11)"></div></div>
+  <div class="day-body" id="body-11">
+    <div class="day-top">
+      <div class="day-title">Load Test — Ingest 500+ Matches</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-test">Test</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Pick 5 different summoners (friends, streamers, pro players — anyone with public profiles). Trigger <code>onboard_summoner</code> for each one. Let them all run concurrently. Watch Flower to see task parallelism.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">While ingestion runs, monitor: (1) Flower queue depth — should stay manageable, not spike to 500+, (2) Docker stats for memory/CPU on the worker container, (3) Postgres <code>pg_stat_activity</code> for open connections — make sure connection pooling isn't leaking.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">After all 5 summoners complete, run this query to verify data integrity: <code>SELECT COUNT(DISTINCT match_id) as matches, COUNT(*) as participants, COUNT(*)::float / COUNT(DISTINCT match_id) as avg_participants_per_match FROM match_participants;</code> — <code>avg_participants_per_match</code> should be very close to 10.0. Any significant deviation indicates a parsing bug.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Check the <code>failed_ingestions</code> table. Any failures? If yes, inspect the error messages. Common issues: champion ID not found in your local data, malformed timeline from a very old match, or a ARAM match slipping through the queue=420 filter.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 11 Deliverable</div>
+      <p>500+ match_participant rows in the DB. avg_participants = ~10.0. Failure rate below 2%. The pipeline handles concurrent onboarding without crashing.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 12 -->
+<div class="day" id="day-12">
+  <div class="day-num-wrap"><div class="day-circle" data-n="12" onclick="toggleDay(12)"></div></div>
+  <div class="day-body" id="body-12">
+    <div class="day-top">
+      <div class="day-title">Phase 2 Wrap-Up + Phase 3 Scaffold</div>
+      <div class="day-meta"><span class="time-pill">~1 hr</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Verify all services start cleanly from a cold boot: <code>docker compose down -v && docker compose up</code>. The <code>-v</code> wipes volumes — this is the real test. All services should be healthy within 30 seconds.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run the Alembic migrations on the fresh DB: <code>alembic upgrade head</code>. Then re-run the TimescaleDB hypertable creation. Document this in <code>README.md</code> as part of the setup steps.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Tag the commit: <code>git tag v0.2-phase2-complete</code>. Update <code>README.md</code> with the new services: how to start Flower, the beat schedule, and how manual refresh works.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Bootstrap the Phase 3 frontend: <code>cd frontend && npx create-next-app@latest . --typescript --tailwind --app --src-dir</code>. Install chart libraries: <code>npm install recharts @tanstack/react-query axios</code>. Verify <code>npm run dev</code> starts on <code>localhost:3000</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">In Next.js, create an <code>api.ts</code> client that wraps <code>axios</code> with your FastAPI base URL from an env variable. Write the first typed request: <code>searchSummoner(gameName, tagLine, region)</code> calling your <code>POST /summoners/search</code> endpoint. Verify it returns data in the browser console.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Phase 2 Complete</div>
+      <p>Fully automated, fault-tolerant ingestion pipeline. Beat scheduler, Celery workers, Flower monitoring, Redis caching, and dead letter handling all working. Next.js scaffolded and talking to FastAPI. Ready for Phase 3 UI.</p>
+    </div>
+  </div>
+</div>
+
+<footer>Phase 2 of 6 — League of Legends Analytics Dashboard · Click any day circle to mark complete</footer>
+
+<script>
+  const STORAGE_KEY = 'lol_phase2_progress';
+  function loadState(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return{}}}
+  function saveState(s){localStorage.setItem(STORAGE_KEY,JSON.stringify(s))}
+  let state = loadState();
+  function toggleDay(n){state[`day_${n}`]=!state[`day_${n}`];saveState(state);renderDay(n);updateStats();}
+  function toggleTask(li){li.classList.toggle('checked');updateStats();}
+  function renderDay(n){
+    const c=document.querySelector(`#day-${n} .day-circle`);
+    const b=document.getElementById(`body-${n}`);
+    const done=!!state[`day_${n}`];
+    c.classList.toggle('done',done);b.classList.toggle('done',done);
+  }
+  function updateStats(){
+    const total=12;
+    const done=Object.values(state).filter(Boolean).length;
+    const tasksDone=document.querySelectorAll('.tasks li.checked').length;
+    document.getElementById('pct-label').textContent=`${done} / ${total} days complete`;
+    document.getElementById('progress-fill').style.width=`${(done/total)*100}%`;
+    document.getElementById('tasks-done').textContent=tasksDone;
+    const end=new Date();end.setDate(end.getDate()+(total-done));
+    document.getElementById('end-date').textContent=end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  for(let i=1;i<=12;i++)renderDay(i);
+  updateStats();
+</script>
+</body>
+</html>

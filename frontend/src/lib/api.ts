@@ -181,6 +181,28 @@ export interface StatsOverview {
   win_streak: number;
 }
 
+export interface TiltPrediction {
+  tilt_score: number | null;
+  tilt_level: string;
+  reasons: string[];
+  games_analyzed: number;
+}
+
+export interface DraftPredictionRequest {
+  puuid: string;
+  ally_champion_ids: number[];
+  enemy_champion_ids: number[];
+  player_champion_id: number;
+}
+
+export interface DraftPrediction {
+  win_probability: number;
+  confidence: string;
+  player_champion_games: number;
+  player_champion_winrate: number;
+  note: string;
+}
+
 export async function getMatches(
   puuid: string,
   limit = 20,
@@ -199,6 +221,18 @@ export async function getChampionStats(puuid: string): Promise<ChampionStat[]> {
 
 export async function getStatsOverview(puuid: string): Promise<StatsOverview> {
   const res = await api.get<StatsOverview>(`/summoners/${puuid}/stats-overview`);
+  return res.data;
+}
+
+export async function getTiltPrediction(puuid: string): Promise<TiltPrediction> {
+  const res = await api.get<TiltPrediction>(`/predict/tilt/${puuid}`);
+  return res.data;
+}
+
+export async function getDraftPrediction(
+  payload: DraftPredictionRequest
+): Promise<DraftPrediction> {
+  const res = await api.post<DraftPrediction>("/predict/draft", payload);
   return res.data;
 }
 

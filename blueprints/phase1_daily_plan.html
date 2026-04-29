@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 — Daily Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500&display=swap');
+
+  :root {
+    --gold: #C89B3C;
+    --gold-light: #F0E6C8;
+    --gold-dim: #7A5C1E;
+    --bg: #0A0C10;
+    --bg2: #111318;
+    --bg3: #181C24;
+    --border: rgba(200,155,60,0.15);
+    --border-bright: rgba(200,155,60,0.4);
+    --text: #C8C0B0;
+    --text-dim: #5A5650;
+    --text-bright: #F0E6C8;
+    --blue: #4A9EFF;
+    --teal: #2ABFAA;
+    --red: #E8523C;
+    --purple: #9B72CF;
+    --green: #4CAF72;
+    --r: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+  }
+
+  /* Header */
+  .hdr { border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 36px; }
+  .hdr-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(200,155,60,.08);
+    border: 1px solid var(--border-bright);
+    padding: 3px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(22px,4vw,36px);
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: -.02em;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  h1 span { color: var(--gold); }
+  .hdr p { color: var(--text-dim); font-size: 13px; max-width: 560px; }
+
+  /* Progress bar */
+  .progress-wrap { margin: 24px 0 0; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .progress-label span:last-child { color: var(--gold); }
+  .progress-track {
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 2px;
+    transition: width .4s ease;
+    width: 0%;
+  }
+
+  /* Stats row */
+  .stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .stat {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 12px 18px;
+    flex: 1;
+    min-width: 120px;
+  }
+  .stat .slabel {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .stat .sval {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .stat .sval.blue { color: var(--blue); }
+  .stat .sval.green { color: var(--green); }
+
+  /* Week separator */
+  .week-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 28px 0 14px;
+  }
+  .week-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border-bright);
+    color: var(--gold);
+    background: rgba(200,155,60,.06);
+    flex-shrink: 0;
+  }
+  .week-line { flex: 1; height: 1px; background: var(--border); }
+  .week-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  /* Day card */
+  .day {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 0 16px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .day:not(:last-of-type)::after {
+    content: '';
+    position: absolute;
+    left: 27px;
+    top: 52px;
+    bottom: -10px;
+    width: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .day-num-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 2px;
+    position: relative;
+    z-index: 1;
+  }
+  .day-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold-dim);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    transition: all .2s;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .day-circle.done {
+    background: rgba(200,155,60,.15);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+  .day-circle.done::after { content: '✓'; }
+  .day-circle:not(.done)::after { content: attr(data-n); }
+
+  .day-body {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 18px 16px;
+    transition: border-color .2s;
+  }
+  .day-body:hover { border-color: rgba(200,155,60,.3); }
+  .day-body.done { opacity: .55; }
+
+  .day-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  .day-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-bright);
+    line-height: 1.3;
+  }
+  .day-meta {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .time-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(74,158,255,.3);
+    color: var(--blue);
+    background: rgba(74,158,255,.06);
+    white-space: nowrap;
+  }
+  .focus-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .fp-setup { border-color: rgba(42,191,170,.3); color: var(--teal); background: rgba(42,191,170,.06); }
+  .fp-code  { border-color: rgba(155,114,207,.3); color: var(--purple); background: rgba(155,114,207,.06); }
+  .fp-db    { border-color: rgba(76,175,114,.3); color: var(--green); background: rgba(76,175,114,.06); }
+  .fp-test  { border-color: rgba(232,82,60,.3); color: var(--red); background: rgba(232,82,60,.06); }
+
+  /* Tasks */
+  .tasks { list-style: none; padding: 0; margin: 0; }
+  .tasks li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(200,155,60,.05);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background .15s;
+  }
+  .tasks li:last-child { border-bottom: none; }
+  .tasks li:hover { background: rgba(200,155,60,.04); }
+  .task-check {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--text-dim);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .2s;
+    font-size: 10px;
+  }
+  .tasks li.checked .task-check {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--bg);
+  }
+  .tasks li.checked .task-check::after { content: '✓'; font-weight: 700; }
+  .task-text { font-size: 13px; color: var(--text); line-height: 1.55; }
+  .tasks li.checked .task-text { text-decoration: line-through; color: var(--text-dim); }
+
+  /* Deliverable */
+  .deliverable {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border-left: 2px solid var(--gold-dim);
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+  }
+  .deliverable .dlabel {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--gold);
+    margin-bottom: 2px;
+  }
+  .deliverable p { color: var(--text-dim); font-size: 12px; margin: 0; }
+  .deliverable code {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--blue);
+    background: rgba(74,158,255,.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* Code snippet */
+  .snippet {
+    margin-top: 10px;
+    background: #0D1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    color: #C9D1D9;
+    overflow-x: auto;
+  }
+  .kw { color: #FF7B72; }
+  .st { color: #A5D6FF; }
+  .cm { color: #6E7681; }
+  .fn { color: #D2A8FF; }
+  .dec { color: #79C0FF; }
+
+  footer {
+    margin-top: 48px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-tag">◆ Phase 1 of 6 — Foundation</div>
+  <h1>Riot API Setup &<br><span>Project Scaffold</span></h1>
+  <p>12 evenings @ 1–2 hrs each. Goal: a working CLI script that fetches, parses, and stores a player's full match history + timelines into PostgreSQL.</p>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span id="pct-label">0 / 12 days complete</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="slabel">Total Days</div>
+    <div class="sval">12</div>
+  </div>
+  <div class="stat">
+    <div class="slabel">Est. Hours</div>
+    <div class="sval blue">18–24 hrs</div>
+  </div>
+  <div class="stat">
+    <div class="slabel">Tasks Done</div>
+    <div class="sval green" id="tasks-done">0</div>
+  </div>
+  <div class="stat">
+    <div class="slabel">Phase End</div>
+    <div class="sval" style="font-size:14px;padding-top:3px" id="end-date">—</div>
+  </div>
+</div>
+
+
+<!-- WEEK 1 -->
+<div class="week-header">
+  <span class="week-pill">Week 1</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 1–5 · Setup + Riot Client</span>
+</div>
+
+<!-- DAY 1 -->
+<div class="day" id="day-1">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="1" onclick="toggleDay(1)"></div>
+  </div>
+  <div class="day-body" id="body-1">
+    <div class="day-top">
+      <div class="day-title">API Key + Monorepo Scaffold</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-setup">Setup</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Register on <strong>developer.riotgames.com</strong> → create a new app → copy your Development API key (valid 24 hrs, regenerate daily)</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create the monorepo: <code>mkdir lol-dashboard && cd lol-dashboard && git init</code> with dirs: <code>/frontend</code>, <code>/backend</code>, <code>/ml</code>, <code>/infra</code></span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Inside <code>/backend</code>: <code>python -m venv .venv && pip install fastapi uvicorn httpx pydantic sqlalchemy asyncpg alembic redis celery python-dotenv</code></span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/.env</code> with <code>RIOT_API_KEY</code>, <code>DATABASE_URL</code>, <code>REDIS_URL</code> — add <code>.env</code> to <code>.gitignore</code> immediately</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>backend/config.py</code> using Pydantic <code>BaseSettings</code> to load all env vars — single source of truth for the whole app</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 1 Deliverable</div>
+      <p>Running <code>python -c "from config import settings; print(settings.riot_api_key)"</code> prints your key without errors.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 2 -->
+<div class="day" id="day-2">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="2" onclick="toggleDay(2)"></div>
+  </div>
+  <div class="day-body" id="body-2">
+    <div class="day-top">
+      <div class="day-title">Docker Compose + PostgreSQL + Redis Up</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-setup">Setup</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>infra/docker-compose.yml</code> with three services: <code>postgres:16</code> (+ TimescaleDB image), <code>redis:7-alpine</code>, and a placeholder <code>api</code> service pointing to <code>/backend</code></span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Use the TimescaleDB image: <code>timescale/timescaledb:latest-pg16</code> — not plain postgres. Set <code>POSTGRES_DB</code>, <code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code> via env vars.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Mount a volume for Postgres data persistence: <code>pgdata:/var/lib/postgresql/data</code> — otherwise your DB wipes on every <code>docker compose down</code></span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run <code>docker compose up -d</code>. Verify: <code>docker exec -it postgres psql -U loluser -c "SELECT default_version FROM pg_available_extensions WHERE name='timescaledb';"</code> → should return a version string.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>backend/database.py</code> with async SQLAlchemy engine + session factory using <code>asyncpg</code> driver. Test the connection with a simple <code>SELECT 1</code>.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 2 Deliverable</div>
+      <p>Postgres + Redis running in Docker. <code>database.py</code> connects and executes <code>SELECT 1</code> without error.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day" id="day-3">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="3" onclick="toggleDay(3)"></div>
+  </div>
+  <div class="day-body" id="body-3">
+    <div class="day-top">
+      <div class="day-title">Pydantic DTOs — Riot API Shapes</div>
+      <div class="day-meta">
+        <span class="time-pill">~2 hrs</span>
+        <span class="focus-pill fp-code">Code</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Read the Riot API docs for these 3 endpoints: <code>GET /lol/summoner/v4</code>, <code>GET /lol/match/v5/matches/{id}</code>, <code>GET /lol/match/v5/matches/{id}/timeline</code>. Open the response in a browser first.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/models/riot_dtos.py</code>. Write <code>SummonerDTO</code> with fields: <code>puuid</code>, <code>id</code> (encryptedSummonerId), <code>profileIconId</code>, <code>summonerLevel</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>ParticipantDTO</code> — this is the big one. Include all fields from the blueprint schema: kills, deaths, assists, totalDamageDealtToChampions, goldEarned, visionScore, championId, teamId, individualPosition, win, challenges (as <code>dict</code>), perks (as <code>dict</code>).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>MatchDTO</code> wrapping <code>MatchInfoDTO</code> (gameId, gameDuration, gameStartTimestamp, queueId, gameVersion) + list of <code>ParticipantDTO</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>TimelineFrameDTO</code> and <code>ParticipantFrameDTO</code> with: <code>participantId</code>, <code>currentGold</code>, <code>totalGold</code>, <code>xp</code>, <code>level</code>, <code>minionsKilled</code>, <code>jungleMinionsKilled</code>, <code>position</code> (x, y).</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 3 Deliverable</div>
+      <p>All DTOs importable. Paste a raw Riot API JSON response into a Python shell and validate it: <code>MatchDTO.model_validate(raw_json)</code> succeeds.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day" id="day-4">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="4" onclick="toggleDay(4)"></div>
+  </div>
+  <div class="day-body" id="body-4">
+    <div class="day-top">
+      <div class="day-title">RiotClient — httpx Async Client</div>
+      <div class="day-meta">
+        <span class="time-pill">~2 hrs</span>
+        <span class="focus-pill fp-code">Code</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/riot/client.py</code>. Write a <code>RiotClient</code> class that holds an <code>httpx.AsyncClient</code> with <code>X-Riot-Token</code> header and a 10s timeout.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement regional routing: Riot uses two URL patterns — <em>platform</em> (<code>na1.api.riotgames.com</code>) for summoner/ranked endpoints, and <em>regional</em> (<code>americas.api.riotgames.com</code>) for match endpoints. Write a helper that maps a platform string like <code>"na1"</code> to the correct regional cluster.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement <code>get_summoner_by_riot_id(game_name, tag_line, region)</code> → calls <code>/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}</code> on the regional cluster, then <code>/lol/summoner/v4/summoners/by-puuid/{puuid}</code> on the platform cluster.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement <code>get_match_ids(puuid, region, count=20, queue=420)</code> → returns a list of match ID strings. Queue 420 = Solo Ranked.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement <code>get_match(match_id, region)</code> and <code>get_timeline(match_id, region)</code>. Both return raw dicts — validation happens in the caller, not here. Add error handling for 404 (match not found) and 429 (rate limited).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Quick test: write a <code>__main__</code> block that fetches your own summoner data and prints it. Run it: <code>python -m riot.client</code>.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 4 Deliverable</div>
+      <p>You can fetch your own match list from Riot's live API and print the first 5 match IDs to the console.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 5 -->
+<div class="day" id="day-5">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="5" onclick="toggleDay(5)"></div>
+  </div>
+  <div class="day-body" id="body-5">
+    <div class="day-top">
+      <div class="day-title">Redis Rate Limiter</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-code">Code</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/riot/rate_limiter.py</code>. Implement the dual-bucket Redis Lua script from the blueprint. Register it on the Redis client with <code>register_script()</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Wrap <code>RiotClient</code>'s request methods so every call goes through <code>await rate_limiter.acquire(region)</code> before hitting the API. The limiter should sleep and retry automatically — callers should never need to think about rate limits.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Also read the <code>X-App-Rate-Limit-Count</code> header from each Riot response. If the server-side count is within 5 of the limit, sleep 1 second proactively. This prevents accidental 429s from clock skew.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test it: write a loop that fires 25 requests in a row to <code>get_match_ids</code> and verify no 429 responses come back. Log the sleep events.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 5 Deliverable</div>
+      <p>25 consecutive API calls complete without a 429. You see rate-limit sleep logs in the console when the short bucket fills.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 2 -->
+<div class="week-header">
+  <span class="week-pill">Week 2</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 6–10 · Database Schema + Ingestion</span>
+</div>
+
+<!-- DAY 6 -->
+<div class="day" id="day-6">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="6" onclick="toggleDay(6)"></div>
+  </div>
+  <div class="day-body" id="body-6">
+    <div class="day-top">
+      <div class="day-title">SQLAlchemy Models + Alembic Init</div>
+      <div class="day-meta">
+        <span class="time-pill">~2 hrs</span>
+        <span class="focus-pill fp-db">Database</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/models/db.py</code>. Write SQLAlchemy ORM models for <code>Summoner</code>, <code>Match</code>, <code>MatchParticipant</code>. Use <code>mapped_column</code> with explicit types matching the schema blueprint exactly.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write the <code>MatchTimelineFrame</code> model — this is the hypertable. Add a composite index on <code>(match_id, participant_id, minute)</code>. Mark it explicitly so Alembic doesn't try to create a PK-based index instead.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run <code>alembic init alembic</code> inside <code>/backend</code>. Configure <code>alembic.ini</code> to use your <code>DATABASE_URL</code> from <code>config.py</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Generate the first migration: <code>alembic revision --autogenerate -m "initial_schema"</code>. Open the generated file and verify it looks correct — check that all tables, columns, and indexes are present.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run <code>alembic upgrade head</code>. Then manually run the TimescaleDB hypertable conversion: <code>SELECT create_hypertable('match_timeline_frames', 'frame_timestamp');</code> via <code>psql</code> or a migration script.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 6 Deliverable</div>
+      <p>All tables exist in Postgres. <code>\dt</code> in psql shows <code>summoners</code>, <code>matches</code>, <code>match_participants</code>, <code>match_timeline_frames</code>. The hypertable is confirmed with <code>SELECT * FROM timescaledb_information.hypertables;</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 7 -->
+<div class="day" id="day-7">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="7" onclick="toggleDay(7)"></div>
+  </div>
+  <div class="day-body" id="body-7">
+    <div class="day-top">
+      <div class="day-title">DB Utility Functions — Upsert Logic</div>
+      <div class="day-meta">
+        <span class="time-pill">~2 hrs</span>
+        <span class="focus-pill fp-db">Database</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/db/ops.py</code>. Write <code>upsert_summoner(session, dto: SummonerDTO)</code> using SQLAlchemy's <code>insert().on_conflict_do_update()</code> on <code>puuid</code>. Never use plain <code>INSERT</code> — matches can be re-fetched.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>upsert_match(session, dto: MatchDTO)</code>. Compute <code>winning_team</code> from <code>participants[x].win == True → teamId</code> before inserting.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>upsert_participants(session, match_id, participants: list[ParticipantDTO])</code>. Compute derived fields here in Python before writing: <code>cs_per_min = (minionsKilled + neutralMinionsKilled) / (gameDuration / 60)</code>, <code>damage_share</code>, <code>kill_participation</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>upsert_timeline_frames(session, match_id, timeline_dto)</code>. Iterate over all frames → all participant frames. Compute <code>minute = frame_timestamp // 60000</code>. Bulk insert with <code>session.execute(insert(MatchTimelineFrame), rows)</code> — do NOT use one insert per row.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a guard: before inserting any match, check if <code>match_id</code> already exists. Skip entirely if it does. This makes ingestion fully idempotent — safe to re-run anytime.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 7 Deliverable</div>
+      <p>Manually call <code>upsert_match()</code> + <code>upsert_participants()</code> + <code>upsert_timeline_frames()</code> with a real Riot API response. Verify rows appear in all four tables via psql.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 8 -->
+<div class="day" id="day-8">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="8" onclick="toggleDay(8)"></div>
+  </div>
+  <div class="day-body" id="body-8">
+    <div class="day-top">
+      <div class="day-title">Wire It Together — Ingestion Pipeline Function</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-code">Code</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ingestion/pipeline.py</code>. Write an <code>async def ingest_match(match_id, region)</code> function that: (1) checks if already stored, (2) fetches match + timeline via RiotClient, (3) validates with DTOs, (4) writes to DB via upsert ops, (5) commits session.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write <code>async def ingest_summoner(game_name, tag_line, region, count=20)</code> that: fetches the summoner, upserts them, gets their last N match IDs, then calls <code>ingest_match</code> for each one sequentially.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add proper logging throughout: use Python's <code>logging</code> module, not <code>print()</code>. Log at INFO level for each match stored, WARNING for skipped (already exists), ERROR for failed fetches.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Wrap the whole ingestion in a <code>try/except</code>. On <code>httpx.HTTPStatusError</code> with status 429, sleep 5 seconds and retry up to 3 times. On any other error, log and continue to the next match — don't crash the whole run.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 8 Deliverable</div>
+      <p><code>ingest_summoner("YourName", "TAG", "na1", count=5)</code> runs cleanly, stores 5 matches with all participants and timeline frames. No crashes, clean logs.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 9 -->
+<div class="day" id="day-9">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="9" onclick="toggleDay(9)"></div>
+  </div>
+  <div class="day-body" id="body-9">
+    <div class="day-top">
+      <div class="day-title">CLI Script — The Phase 1 Deliverable</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-code">Code</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/ingest.py</code> as a runnable script. Use <code>argparse</code> or <code>typer</code> to accept: <code>--summoner "Name#TAG"</code>, <code>--region na1</code>, <code>--count 50</code>, <code>--queue 420</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a progress display: print a simple counter like <code>[12/50] Ingesting NA1_482938...</code> so you can see it working in real time.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run it for real: <code>python ingest.py --summoner "YourRiotID#TAG" --region na1 --count 50</code>. This should take 5–10 minutes due to rate limiting. Let it complete fully.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">After it finishes, connect to psql and verify: <code>SELECT COUNT(*) FROM match_participants WHERE puuid = 'your-puuid';</code> — should be 50. <code>SELECT COUNT(*) FROM match_timeline_frames;</code> — should be 50 × ~30 frames × 10 participants ≈ 15,000+ rows.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 9 Deliverable</div>
+      <p>50 real matches fully ingested. 15,000+ timeline frame rows in the hypertable. The core data pipeline is working end-to-end.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 10 -->
+<div class="day" id="day-10">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="10" onclick="toggleDay(10)"></div>
+  </div>
+  <div class="day-body" id="body-10">
+    <div class="day-top">
+      <div class="day-title">FastAPI Skeleton + First Endpoint</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-code">Code</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>backend/main.py</code> with a <code>FastAPI()</code> app. Add CORS middleware allowing your frontend origin. Add lifespan event handlers for startup (DB pool, Redis connect) and shutdown (graceful close).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Wire up the <code>/api/v1</code> prefix via an <code>APIRouter</code>. Add a <code>GET /health</code> endpoint that returns <code>{"status": "ok", "db": "connected", "redis": "connected"}</code> — actually tests both connections.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Implement <code>GET /api/v1/summoners/{puuid}</code> — queries the DB and returns the summoner row as a Pydantic response model. Add a <code>POST /api/v1/summoners/search</code> that accepts <code>{game_name, tag_line, region}</code> and triggers the ingestion pipeline (fire-and-forget for now).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run: <code>uvicorn main:app --reload</code>. Open <code>http://localhost:8000/docs</code> — verify the Swagger UI shows your endpoints. Test them directly in Swagger.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 10 Deliverable</div>
+      <p>FastAPI running locally. <code>/health</code> returns 200. Summoner lookup endpoint returns real data from your DB. Swagger UI is live.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 2 FINAL -->
+<div class="week-header" style="margin-top:12px">
+  <span class="week-pill">Buffer</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 11–12 · Debug + Verify + Handoff</span>
+</div>
+
+<!-- DAY 11 -->
+<div class="day" id="day-11">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="11" onclick="toggleDay(11)"></div>
+  </div>
+  <div class="day-body" id="body-11">
+    <div class="day-top">
+      <div class="day-title">Verification Queries + Data Quality Check</div>
+      <div class="day-meta">
+        <span class="time-pill">~1.5 hrs</span>
+        <span class="focus-pill fp-test">Test</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run this query and verify it returns sensible numbers: <code>SELECT champion_id, COUNT(*), AVG(kills), AVG(deaths), ROUND(AVG(CASE WHEN won THEN 1.0 ELSE 0.0 END)*100,1) as wr FROM match_participants WHERE puuid='your-puuid' GROUP BY champion_id ORDER BY COUNT(*) DESC;</code></span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Verify timeline data: <code>SELECT minute, AVG(total_gold) FROM match_timeline_frames WHERE match_id = 'some-match-id' AND participant_id = 1 GROUP BY minute ORDER BY minute;</code> — should show a smooth gold curve.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Check for data quality issues: any participants with <code>deaths = 0</code> and huge KDA? Any timeline frames with <code>total_gold = 0</code> after minute 5? Any matches with <code>game_duration &lt; 300</code> (remakes)? Note these — you'll filter remakes in Phase 4 ML training.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Ingest 2–3 more summoners from your friends list to grow the dataset beyond just yourself. At least 150 total match_participant rows is a good milestone before Phase 2.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 11 Deliverable</div>
+      <p>Your data is verified as sane. You have stats that match what you'd see on op.gg for the same summoner.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 12 -->
+<div class="day" id="day-12">
+  <div class="day-num-wrap">
+    <div class="day-circle" data-n="12" onclick="toggleDay(12)"></div>
+  </div>
+  <div class="day-body" id="body-12">
+    <div class="day-top">
+      <div class="day-title">Phase 1 Wrap-Up + Phase 2 Prep</div>
+      <div class="day-meta">
+        <span class="time-pill">~1 hr</span>
+        <span class="focus-pill fp-setup">Setup</span>
+      </div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write a <code>README.md</code> in <code>/backend</code> with setup instructions: Docker Compose, env vars, how to run the CLI ingest script. Future-you will thank present-you.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Commit everything to git with meaningful messages. Tag this commit: <code>git tag v0.1-phase1-complete</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Install Phase 2 dependencies now so they're ready: <code>pip install celery[redis] flower kombu</code>. Verify <code>celery --version</code> works.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Review Phase 2 blueprint section (Celery + background ingestion). Skim the Celery docs for <code>@shared_task</code> and <code>beat_schedule</code>. Just read — no code today.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Phase 1 Complete</div>
+      <p>Full working ingestion pipeline. Riot API → rate limiter → DTO validation → PostgreSQL + TimescaleDB. FastAPI serving data. Ready to add Celery in Phase 2.</p>
+    </div>
+  </div>
+</div>
+
+<footer>Phase 1 of 6 — League of Legends Analytics Dashboard · Click any day circle to mark it complete</footer>
+
+<script>
+  const STORAGE_KEY = 'lol_phase1_progress';
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  }
+  function saveState(state) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  let state = loadState();
+
+  function toggleDay(n) {
+    state[`day_${n}`] = !state[`day_${n}`];
+    saveState(state);
+    renderDay(n);
+    updateStats();
+  }
+
+  function toggleTask(li) {
+    li.classList.toggle('checked');
+    updateStats();
+  }
+
+  function renderDay(n) {
+    const circle = document.querySelector(`#day-${n} .day-circle`);
+    const body   = document.getElementById(`body-${n}`);
+    const done   = !!state[`day_${n}`];
+    circle.classList.toggle('done', done);
+    body.classList.toggle('done', done);
+  }
+
+  function updateStats() {
+    const totalDays  = 12;
+    const totalTasks = document.querySelectorAll('.tasks li').length;
+    const doneDays   = Object.values(state).filter(Boolean).length;
+    const doneTasks  = document.querySelectorAll('.tasks li.checked').length;
+
+    document.getElementById('pct-label').textContent = `${doneDays} / ${totalDays} days complete`;
+    document.getElementById('progress-fill').style.width = `${(doneDays / totalDays) * 100}%`;
+    document.getElementById('tasks-done').textContent = doneTasks;
+
+    const today = new Date();
+    const end = new Date(today);
+    end.setDate(today.getDate() + (totalDays - doneDays));
+    document.getElementById('end-date').textContent = end.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
+
+  // Init
+  for (let i = 1; i <= 12; i++) renderDay(i);
+  updateStats();
+</script>
+</body>
+</html>

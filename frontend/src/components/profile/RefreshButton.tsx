@@ -23,6 +23,7 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
         queryClient.invalidateQueries({ queryKey: ["matches", puuid] });
         queryClient.invalidateQueries({ queryKey: ["champion-stats", puuid] });
         queryClient.invalidateQueries({ queryKey: ["stats-overview", puuid] });
+        queryClient.invalidateQueries({ queryKey: ["tilt-prediction", puuid] });
         setLoading(false);
       }, 3000);
     } catch {

@@ -37,7 +37,10 @@ class ParticipantDTO(BaseModel):
     championId: int
     teamId: int
     individualPosition: str
+    teamPosition: str | None = None
     win: bool
+    summoner1Id: int | None = None
+    summoner2Id: int | None = None
     challenges: dict[str, Any] = Field(default_factory=dict)
     perks: dict[str, Any] = Field(default_factory=dict)
 

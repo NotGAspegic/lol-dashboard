@@ -1,0 +1,652 @@
+{
+  "patch": "16.8.1",
+  "source_url": "https://ddragon.leagueoflegends.com/cdn/16.8.1/data/en_US/champion.json",
+  "champions": {
+    "1": [
+      "Mage",
+      "Support"
+    ],
+    "2": [
+      "Fighter",
+      "Tank"
+    ],
+    "3": [
+      "Tank",
+      "Mage"
+    ],
+    "4": [
+      "Mage",
+      "Marksman"
+    ],
+    "5": [
+      "Fighter",
+      "Tank"
+    ],
+    "6": [
+      "Fighter",
+      "Tank"
+    ],
+    "7": [
+      "Assassin",
+      "Mage"
+    ],
+    "8": [
+      "Mage",
+      "Fighter"
+    ],
+    "9": [
+      "Mage",
+      "Support"
+    ],
+    "10": [
+      "Mage",
+      "Marksman"
+    ],
+    "11": [
+      "Fighter",
+      "Assassin"
+    ],
+    "12": [
+      "Tank",
+      "Support"
+    ],
+    "13": [
+      "Mage"
+    ],
+    "14": [
+      "Tank",
+      "Fighter"
+    ],
+    "15": [
+      "Marksman"
+    ],
+    "16": [
+      "Support",
+      "Mage"
+    ],
+    "17": [
+      "Marksman",
+      "Mage"
+    ],
+    "18": [
+      "Marksman",
+      "Assassin"
+    ],
+    "19": [
+      "Fighter",
+      "Tank"
+    ],
+    "20": [
+      "Tank",
+      "Mage"
+    ],
+    "21": [
+      "Marksman",
+      "Mage"
+    ],
+    "22": [
+      "Marksman",
+      "Support"
+    ],
+    "23": [
+      "Fighter",
+      "Assassin"
+    ],
+    "24": [
+      "Fighter"
+    ],
+    "25": [
+      "Support",
+      "Mage"
+    ],
+    "26": [
+      "Support",
+      "Mage"
+    ],
+    "27": [
+      "Tank",
+      "Mage"
+    ],
+    "28": [
+      "Assassin",
+      "Mage"
+    ],
+    "29": [
+      "Marksman",
+      "Assassin"
+    ],
+    "30": [
+      "Mage"
+    ],
+    "31": [
+      "Tank",
+      "Mage"
+    ],
+    "32": [
+      "Tank",
+      "Support"
+    ],
+    "33": [
+      "Tank"
+    ],
+    "34": [
+      "Mage"
+    ],
+    "35": [
+      "Assassin"
+    ],
+    "36": [
+      "Tank",
+      "Fighter"
+    ],
+    "37": [
+      "Support",
+      "Mage"
+    ],
+    "38": [
+      "Assassin",
+      "Mage"
+    ],
+    "39": [
+      "Fighter",
+      "Assassin"
+    ],
+    "40": [
+      "Support",
+      "Mage"
+    ],
+    "41": [
+      "Fighter"
+    ],
+    "42": [
+      "Marksman",
+      "Mage"
+    ],
+    "43": [
+      "Mage",
+      "Support"
+    ],
+    "44": [
+      "Support",
+      "Tank"
+    ],
+    "45": [
+      "Mage"
+    ],
+    "48": [
+      "Fighter",
+      "Tank"
+    ],
+    "50": [
+      "Mage",
+      "Support"
+    ],
+    "51": [
+      "Marksman"
+    ],
+    "53": [
+      "Tank",
+      "Support"
+    ],
+    "54": [
+      "Tank",
+      "Mage"
+    ],
+    "55": [
+      "Assassin",
+      "Mage"
+    ],
+    "56": [
+      "Fighter",
+      "Assassin"
+    ],
+    "57": [
+      "Tank",
+      "Support"
+    ],
+    "58": [
+      "Fighter",
+      "Tank"
+    ],
+    "59": [
+      "Fighter",
+      "Tank"
+    ],
+    "60": [
+      "Assassin",
+      "Mage"
+    ],
+    "61": [
+      "Mage",
+      "Support"
+    ],
+    "62": [
+      "Fighter",
+      "Tank"
+    ],
+    "63": [
+      "Mage",
+      "Support"
+    ],
+    "64": [
+      "Fighter",
+      "Assassin"
+    ],
+    "67": [
+      "Marksman",
+      "Assassin"
+    ],
+    "68": [
+      "Fighter",
+      "Mage"
+    ],
+    "69": [
+      "Mage"
+    ],
+    "72": [
+      "Tank",
+      "Fighter"
+    ],
+    "74": [
+      "Mage",
+      "Support"
+    ],
+    "75": [
+      "Fighter",
+      "Tank"
+    ],
+    "76": [
+      "Assassin",
+      "Mage"
+    ],
+    "77": [
+      "Fighter",
+      "Tank"
+    ],
+    "78": [
+      "Tank",
+      "Fighter"
+    ],
+    "79": [
+      "Fighter",
+      "Mage"
+    ],
+    "80": [
+      "Fighter",
+      "Assassin"
+    ],
+    "81": [
+      "Marksman",
+      "Mage"
+    ],
+    "82": [
+      "Fighter",
+      "Mage"
+    ],
+    "83": [
+      "Fighter",
+      "Tank"
+    ],
+    "84": [
+      "Assassin"
+    ],
+    "85": [
+      "Mage"
+    ],
+    "86": [
+      "Fighter",
+      "Tank"
+    ],
+    "89": [
+      "Tank",
+      "Support"
+    ],
+    "90": [
+      "Mage"
+    ],
+    "91": [
+      "Assassin"
+    ],
+    "92": [
+      "Fighter",
+      "Assassin"
+    ],
+    "96": [
+      "Marksman",
+      "Mage"
+    ],
+    "98": [
+      "Tank"
+    ],
+    "99": [
+      "Mage",
+      "Support"
+    ],
+    "101": [
+      "Mage",
+      "Support"
+    ],
+    "102": [
+      "Fighter",
+      "Tank"
+    ],
+    "103": [
+      "Mage",
+      "Assassin"
+    ],
+    "104": [
+      "Marksman"
+    ],
+    "105": [
+      "Assassin",
+      "Fighter"
+    ],
+    "106": [
+      "Fighter",
+      "Tank"
+    ],
+    "107": [
+      "Assassin",
+      "Fighter"
+    ],
+    "110": [
+      "Marksman",
+      "Mage"
+    ],
+    "111": [
+      "Tank",
+      "Support"
+    ],
+    "112": [
+      "Mage"
+    ],
+    "113": [
+      "Tank"
+    ],
+    "114": [
+      "Fighter",
+      "Assassin"
+    ],
+    "115": [
+      "Mage"
+    ],
+    "117": [
+      "Support",
+      "Mage"
+    ],
+    "119": [
+      "Marksman"
+    ],
+    "120": [
+      "Fighter",
+      "Tank"
+    ],
+    "121": [
+      "Assassin"
+    ],
+    "122": [
+      "Fighter",
+      "Tank"
+    ],
+    "126": [
+      "Fighter",
+      "Marksman"
+    ],
+    "127": [
+      "Mage"
+    ],
+    "131": [
+      "Fighter",
+      "Assassin"
+    ],
+    "133": [
+      "Marksman",
+      "Assassin"
+    ],
+    "134": [
+      "Mage"
+    ],
+    "136": [
+      "Mage"
+    ],
+    "141": [
+      "Fighter",
+      "Assassin"
+    ],
+    "142": [
+      "Mage"
+    ],
+    "143": [
+      "Mage",
+      "Support"
+    ],
+    "145": [
+      "Marksman",
+      "Mage"
+    ],
+    "147": [
+      "Support",
+      "Mage"
+    ],
+    "150": [
+      "Fighter",
+      "Tank"
+    ],
+    "154": [
+      "Tank",
+      "Fighter"
+    ],
+    "157": [
+      "Fighter",
+      "Assassin"
+    ],
+    "161": [
+      "Mage",
+      "Support"
+    ],
+    "163": [
+      "Mage",
+      "Support"
+    ],
+    "164": [
+      "Fighter",
+      "Assassin"
+    ],
+    "166": [
+      "Marksman",
+      "Assassin"
+    ],
+    "200": [
+      "Fighter"
+    ],
+    "201": [
+      "Tank",
+      "Support"
+    ],
+    "202": [
+      "Marksman",
+      "Mage"
+    ],
+    "203": [
+      "Marksman"
+    ],
+    "221": [
+      "Marksman"
+    ],
+    "222": [
+      "Marksman"
+    ],
+    "223": [
+      "Tank",
+      "Support"
+    ],
+    "233": [
+      "Fighter",
+      "Assassin"
+    ],
+    "234": [
+      "Fighter",
+      "Assassin"
+    ],
+    "235": [
+      "Support",
+      "Marksman"
+    ],
+    "236": [
+      "Marksman",
+      "Assassin"
+    ],
+    "238": [
+      "Assassin"
+    ],
+    "240": [
+      "Fighter"
+    ],
+    "245": [
+      "Assassin",
+      "Mage"
+    ],
+    "246": [
+      "Assassin"
+    ],
+    "254": [
+      "Fighter",
+      "Assassin"
+    ],
+    "266": [
+      "Fighter"
+    ],
+    "267": [
+      "Support",
+      "Mage"
+    ],
+    "268": [
+      "Mage",
+      "Marksman"
+    ],
+    "350": [
+      "Support",
+      "Mage"
+    ],
+    "360": [
+      "Marksman",
+      "Assassin"
+    ],
+    "412": [
+      "Support",
+      "Tank"
+    ],
+    "420": [
+      "Fighter",
+      "Tank"
+    ],
+    "421": [
+      "Fighter",
+      "Tank"
+    ],
+    "427": [
+      "Support",
+      "Mage"
+    ],
+    "429": [
+      "Marksman"
+    ],
+    "432": [
+      "Support",
+      "Mage"
+    ],
+    "497": [
+      "Support"
+    ],
+    "498": [
+      "Marksman"
+    ],
+    "516": [
+      "Tank"
+    ],
+    "517": [
+      "Mage",
+      "Assassin"
+    ],
+    "518": [
+      "Mage",
+      "Support"
+    ],
+    "523": [
+      "Marksman"
+    ],
+    "526": [
+      "Tank",
+      "Support"
+    ],
+    "555": [
+      "Support",
+      "Assassin"
+    ],
+    "711": [
+      "Mage"
+    ],
+    "777": [
+      "Fighter",
+      "Assassin"
+    ],
+    "799": [
+      "Fighter",
+      "Assassin"
+    ],
+    "800": [
+      "Mage",
+      "Support"
+    ],
+    "804": [
+      "Marksman"
+    ],
+    "875": [
+      "Fighter",
+      "Tank"
+    ],
+    "876": [
+      "Fighter",
+      "Mage"
+    ],
+    "887": [
+      "Fighter"
+    ],
+    "888": [
+      "Support",
+      "Mage"
+    ],
+    "893": [
+      "Mage",
+      "Assassin"
+    ],
+    "895": [
+      "Fighter",
+      "Assassin"
+    ],
+    "897": [
+      "Tank",
+      "Fighter"
+    ],
+    "901": [
+      "Marksman",
+      "Mage"
+    ],
+    "902": [
+      "Support",
+      "Mage"
+    ],
+    "904": [
+      "Fighter",
+      "Assassin"
+    ],
+    "910": [
+      "Mage",
+      "Support"
+    ],
+    "950": [
+      "Assassin",
+      "Fighter"
+    ]
+  }
+}

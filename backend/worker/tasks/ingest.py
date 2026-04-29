@@ -171,7 +171,12 @@ def _ingest_match_on_failure(self, exc, task_id, args, kwargs, einfo):
     default_retry_delay=RATE_LIMIT_RETRY_DELAY_SECONDS,
     on_failure=_ingest_match_on_failure,
 )
-def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
+def ingest_match(
+    self,
+    match_id: str,
+    region: str,
+    refresh_existing: bool = False,
+) -> dict[str, Any]:
     """Fetch, validate, and persist a single match as the core ingestion unit."""
     game_id = _extract_game_id(match_id)
     normalized_region = region.strip().lower()
@@ -180,7 +185,8 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
 
     # Step 1: check if match_id already exists in DB.
     with SyncSessionFactory() as check_session:
-        if _match_exists_sync(check_session, game_id):
+        match_exists = _match_exists_sync(check_session, game_id)
+        if match_exists and not refresh_existing:
             logger.info(
                 "Skipping ingest task; match already exists "
                 "(match_id=%s, game_id=%s, region=%s)",
@@ -193,6 +199,7 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
                 "region": normalized_region,
                 "inserted": False,
                 "skipped": True,
+                "refreshed": False,
             }
 
     async def _fetch_match_and_timeline() -> tuple[dict[str, Any], dict[str, Any]]:
@@ -228,14 +235,18 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
 
         with SyncSessionFactory() as session:
             inserted = upsert_match_sync(session, match_dto)
-            if not inserted:
+            refreshed = False
+            if not inserted and not refresh_existing:
                 session.rollback()
                 return {
                     "match_id": match_id,
                     "region": normalized_region,
                     "inserted": False,
                     "skipped": True,
+                    "refreshed": False,
                 }
+            if not inserted and refresh_existing:
+                refreshed = True
 
             upsert_participants_sync(session, game_id, match_dto.participants)
             upsert_timeline_frames_sync(session, game_id, validated_timeline)
@@ -266,6 +277,7 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
             "inserted": False,
             "skipped": True,
             "not_found": True,
+            "refreshed": False,
         }
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code if exc.response is not None else None
@@ -282,6 +294,7 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
                 "inserted": False,
                 "skipped": True,
                 "not_found": True,
+                "refreshed": False,
             }
         if status_code == 429:
             retry_after = exc.response.headers.get("Retry-After")
@@ -318,8 +331,9 @@ def ingest_match(self, match_id: str, region: str) -> dict[str, Any]:
     return {
         "match_id": match_id,
         "region": normalized_region,
-        "inserted": True,
+        "inserted": inserted,
         "skipped": False,
+        "refreshed": refreshed,
     }
 
 
@@ -336,6 +350,7 @@ def ingest_summoner_matches(
     count: int = 20,
     queue: int = 420,
     since_match_id: str | None = None,
+    include_existing: bool = False,
 ) -> dict[str, Any]:
     """Orchestrate match ingestion by dispatching one task per new match ID.
 
@@ -482,28 +497,37 @@ def ingest_summoner_matches(
                 ).all()
             )
 
-    new_match_ids = [
-        game_id_to_match_id[game_id]
-        for game_id in ordered_game_ids
-        if game_id not in existing_game_ids
-    ]
+    if include_existing:
+        target_match_ids = [game_id_to_match_id[game_id] for game_id in ordered_game_ids]
+    else:
+        target_match_ids = [
+            game_id_to_match_id[game_id]
+            for game_id in ordered_game_ids
+            if game_id not in existing_game_ids
+        ]
 
     dispatched_tasks: list[dict[str, str]] = []
-    for i, new_match_id in enumerate(new_match_ids):
+    for i, target_match_id in enumerate(target_match_ids):
         countdown = i * 3
         async_result = ingest_match.apply_async(
-            args=[new_match_id, normalized_region],
+            args=[target_match_id, normalized_region],
+            kwargs={"refresh_existing": include_existing},
             countdown=countdown,
             queue="ingestion",
         )
         dispatched_tasks.append(
             {
-                "match_id": new_match_id,
+                "match_id": target_match_id,
                 "task_id": async_result.id,
                 "countdown": str(countdown),
             }
         )
 
+    new_match_ids = [
+        game_id_to_match_id[game_id]
+        for game_id in ordered_game_ids
+        if game_id not in existing_game_ids
+    ]
     newest_match_id_in_batch = new_match_ids[0] if new_match_ids else None
     cursor_updated = False
     if newest_match_id_in_batch is not None:
@@ -528,8 +552,8 @@ def ingest_summoner_matches(
 
     logger.info(
         "Dispatched ingest_match subtasks (puuid=%s, region=%s, requested_count=%s, "
-        "fetched=%s, candidate=%s, existing=%s, dispatched=%s, since_match_id=%s, "
-        "cursor_found=%s, newest_match_id_in_batch=%s, cursor_updated=%s)",
+        "fetched=%s, candidate=%s, existing=%s, dispatched=%s, include_existing=%s, "
+        "since_match_id=%s, cursor_found=%s, newest_match_id_in_batch=%s, cursor_updated=%s)",
         normalized_puuid,
         normalized_region,
         count,
@@ -537,6 +561,7 @@ def ingest_summoner_matches(
         len(candidate_match_ids),
         len(existing_game_ids),
         len(dispatched_tasks),
+        include_existing,
         normalized_since_match_id,
         cursor_found,
         newest_match_id_in_batch,
@@ -548,6 +573,7 @@ def ingest_summoner_matches(
         "region": normalized_region,
         "requested_count": count,
         "queue": queue,
+        "include_existing": include_existing,
         "since_match_id": normalized_since_match_id,
         "cursor_found": cursor_found,
         "fetched_match_count": len(fetched_match_ids),

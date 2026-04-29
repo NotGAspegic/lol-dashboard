@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 3 — Daily Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500&display=swap');
+  :root {
+    --gold:#C89B3C;--gold-light:#F0E6C8;--gold-dim:#7A5C1E;
+    --bg:#0A0C10;--bg2:#111318;--bg3:#181C24;
+    --border:rgba(200,155,60,.15);--border-bright:rgba(200,155,60,.4);
+    --text:#C8C0B0;--text-dim:#5A5650;--text-bright:#F0E6C8;
+    --blue:#4A9EFF;--teal:#2ABFAA;--red:#E8523C;--purple:#9B72CF;--green:#4CAF72;--amber:#F0A830;
+    --r:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;max-width:860px;margin:0 auto;padding:40px 28px 80px;}
+
+  .hdr{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px;}
+  .hdr-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(200,155,60,.08);border:1px solid var(--border-bright);padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:14px;}
+  h1{font-family:'Syne',sans-serif;font-size:clamp(22px,4vw,36px);font-weight:800;color:var(--gold-light);letter-spacing:-.02em;line-height:1.15;margin-bottom:10px;}
+  h1 span{color:var(--gold);}
+  .hdr p{color:var(--text-dim);font-size:13px;max-width:600px;}
+
+  .phase-chain{display:flex;gap:0;margin:22px 0 0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+  .chain-item{flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border);font-family:'DM Mono',monospace;}
+  .chain-item:last-child{border-right:none;}
+  .chain-item .cn{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:3px;}
+  .chain-item .cv{font-size:12px;font-weight:500;color:var(--text-bright);}
+  .chain-item.active{background:rgba(200,155,60,.06);}
+  .chain-item.active .cv{color:var(--gold);}
+  .chain-item.done .cv{color:var(--green);}
+
+  .progress-wrap{margin:20px 0 0;}
+  .progress-label{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+  .progress-label span:last-child{color:var(--gold);}
+  .progress-track{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width .4s ease;width:0%;}
+
+  .stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;flex:1;min-width:120px;}
+  .stat .slabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:4px;}
+  .stat .sval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--gold);}
+  .stat .sval.blue{color:var(--blue);}.stat .sval.green{color:var(--green);}
+
+  .week-header{display:flex;align-items:center;gap:12px;margin:28px 0 14px;}
+  .week-pill{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:20px;border:1px solid var(--border-bright);color:var(--gold);background:rgba(200,155,60,.06);flex-shrink:0;}
+  .week-line{flex:1;height:1px;background:var(--border);}
+  .week-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);flex-shrink:0;}
+
+  .day{display:grid;grid-template-columns:56px 1fr;gap:0 16px;margin-bottom:10px;position:relative;}
+  .day:not(:last-of-type)::after{content:'';position:absolute;left:27px;top:52px;bottom:-10px;width:2px;background:var(--border);z-index:0;}
+  .day-num-wrap{display:flex;flex-direction:column;align-items:center;padding-top:2px;position:relative;z-index:1;}
+  .day-circle{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gold-dim);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);transition:all .2s;cursor:pointer;flex-shrink:0;}
+  .day-circle.done{background:rgba(200,155,60,.15);border-color:var(--gold);color:var(--gold-light);}
+  .day-circle.done::after{content:'✓';}.day-circle:not(.done)::after{content:attr(data-n);}
+
+  .day-body{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px 16px;transition:border-color .2s;}
+  .day-body:hover{border-color:rgba(200,155,60,.3);}
+  .day-body.done{opacity:.55;}
+
+  .day-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+  .day-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright);line-height:1.3;}
+  .day-meta{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+
+  .time-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);white-space:nowrap;}
+  .focus-pill{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid;white-space:nowrap;}
+  .fp-setup{border-color:rgba(42,191,170,.3);color:var(--teal);background:rgba(42,191,170,.06);}
+  .fp-code{border-color:rgba(155,114,207,.3);color:var(--purple);background:rgba(155,114,207,.06);}
+  .fp-ui{border-color:rgba(200,155,60,.3);color:var(--gold);background:rgba(200,155,60,.06);}
+  .fp-test{border-color:rgba(232,82,60,.3);color:var(--red);background:rgba(232,82,60,.06);}
+  .fp-chart{border-color:rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.06);}
+
+  .tasks{list-style:none;padding:0;margin:0;}
+  .tasks li{display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px solid rgba(200,155,60,.05);cursor:pointer;border-radius:4px;transition:background .15s;}
+  .tasks li:last-child{border-bottom:none;}
+  .tasks li:hover{background:rgba(200,155,60,.04);}
+  .task-check{width:16px;height:16px;border:1.5px solid var(--text-dim);border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:10px;}
+  .tasks li.checked .task-check{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+  .tasks li.checked .task-check::after{content:'✓';font-weight:700;}
+  .task-text{font-size:13px;color:var(--text);line-height:1.55;}
+  .tasks li.checked .task-text{text-decoration:line-through;color:var(--text-dim);}
+
+  .deliverable{margin-top:12px;padding:10px 14px;background:var(--bg3);border-left:2px solid var(--gold-dim);border-radius:0 4px 4px 0;font-size:12px;}
+  .deliverable .dlabel{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:2px;}
+  .deliverable p{color:var(--text-dim);font-size:12px;margin:0;}
+
+  .snippet{margin-top:12px;background:#0D1117;border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:#C9D1D9;overflow-x:auto;}
+  .snippet .fn{color:#D2A8FF;}.snippet .kw{color:#FF7B72;}.snippet .st{color:#A5D6FF;}.snippet .cm{color:#6E7681;}.snippet .dec{color:#56D364;}.snippet .num{color:#79C0FF;}.snippet .cl{color:#FFA657;}.snippet .tag{color:#7EE787;}.snippet .attr{color:#79C0FF;}
+
+  .callout{display:flex;gap:12px;padding:12px 16px;border-radius:var(--r);margin:12px 0;border:1px solid;font-size:13px;}
+  .callout.warn{background:rgba(200,155,60,.06);border-color:var(--border-bright);color:var(--gold);}
+  .callout.info{background:rgba(74,158,255,.06);border-color:rgba(74,158,255,.25);color:#7BB8FF;}
+  .callout.tip{background:rgba(76,175,114,.06);border-color:rgba(76,175,114,.25);color:#7EC89A;}
+  .callout-icon{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;flex-shrink:0;padding-top:1px;}
+  .callout p{margin:0;color:inherit;font-size:13px;}
+
+  footer{margin-top:48px;border-top:1px solid var(--border);padding-top:20px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-tag">◆ Phase 3 of 6 — Core Dashboard</div>
+  <h1>Next.js UI &<br><span>Basic Stats</span></h1>
+  <p>14 evenings @ 1–2 hrs each. Goal: a fully functional player dashboard — summoner search, profile page, champion stats table, KDA trend chart, and win rate breakdown — all talking to your live FastAPI backend.</p>
+
+  <div class="phase-chain">
+    <div class="chain-item done"><div class="cn">Phase 1</div><div class="cv">✓ Foundation</div></div>
+    <div class="chain-item done"><div class="cn">Phase 2</div><div class="cv">✓ Pipeline</div></div>
+    <div class="chain-item active"><div class="cn">Phase 3</div><div class="cv">→ Dashboard</div></div>
+    <div class="chain-item"><div class="cn">Phase 4</div><div class="cv">Analytics</div></div>
+    <div class="chain-item"><div class="cn">Phase 5</div><div class="cv">ML Models</div></div>
+    <div class="chain-item"><div class="cn">Phase 6</div><div class="cv">Deploy</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Progress</span><span id="pct-label">0 / 14 days complete</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="slabel">Total Days</div><div class="sval">14</div></div>
+  <div class="stat"><div class="slabel">Est. Hours</div><div class="sval blue">21–28 hrs</div></div>
+  <div class="stat"><div class="slabel">Tasks Done</div><div class="sval green" id="tasks-done">0</div></div>
+  <div class="stat"><div class="slabel">Phase End</div><div class="sval" style="font-size:14px;padding-top:3px" id="end-date">—</div></div>
+</div>
+
+
+<!-- WEEK 1 -->
+<div class="week-header">
+  <span class="week-pill">Week 1</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 1–5 · Project Setup + CORS + Layout</span>
+</div>
+
+<!-- DAY 1 -->
+<div class="day" id="day-1">
+  <div class="day-num-wrap"><div class="day-circle" data-n="1" onclick="toggleDay(1)"></div></div>
+  <div class="day-body" id="body-1">
+    <div class="day-top">
+      <div class="day-title">Fix CORS + Verify Frontend ↔ API Connection</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">The 502 error from before is a CORS issue. Open <code>backend/main.py</code> and find your <code>CORSMiddleware</code>. Make sure <code>allow_origins</code> includes <code>"http://localhost:3000"</code> — this is your Next.js dev server.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Also add <code>allow_credentials=True</code>, <code>allow_methods=["*"]</code>, <code>allow_headers=["*"]</code> to the CORS config. Without these, preflight OPTIONS requests from the browser will be rejected.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Restart the API container: <code>docker compose restart api</code>. Then test CORS directly from the browser console on <code>localhost:3000</code>: open DevTools → Console and run <code>fetch("http://localhost:8000/api/v1/health").then(r => r.json()).then(console.log)</code>. Should return <code>{status: "ok"}</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">In <code>frontend/.env.local</code>, confirm: <code>NEXT_PUBLIC_API_URL=http://localhost:8000</code>. Then update <code>frontend/src/lib/api.ts</code> — make sure the axios base URL reads from this env var: <code>baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1"</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test the full roundtrip: update <code>src/app/page.tsx</code> to call <code>searchSummoner("G2 Caps", "1323", "euw1")</code> and render the result. Open <code>localhost:3000</code> — you should see the JSON response on screen with no errors.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 1 Deliverable</div>
+      <p>Browser fetches from FastAPI without CORS errors. <code>searchSummoner()</code> returns data visible on localhost:3000.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 2 -->
+<div class="day" id="day-2">
+  <div class="day-num-wrap"><div class="day-circle" data-n="2" onclick="toggleDay(2)"></div></div>
+  <div class="day-body" id="body-2">
+    <div class="day-top">
+      <div class="day-title">Global Layout + Design System Setup</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Install fonts and icon library: <code>npm install @fontsource/inter lucide-react</code>. In <code>src/app/layout.tsx</code>, import Inter and set it as the body font class. This is the one place fonts are configured for the whole app.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Define your color tokens in <code>tailwind.config.ts</code>. Add a <code>colors</code> extension with your palette: <code>gold: "#C89B3C"</code>, <code>surface: "#111318"</code>, <code>surface2: "#181C24"</code>, <code>border: "rgba(200,155,60,0.15)"</code>. These become Tailwind classes like <code>bg-surface</code> and <code>text-gold</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Write the root layout in <code>src/app/layout.tsx</code>. Set <code>background: #0A0C10</code> on the body. Add a centered container with <code>max-w-6xl mx-auto px-4</code>. This wraps every page.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/ui/Navbar.tsx</code>. Simple top bar with your app name ("Farsight" or whatever you want to call it), a search input placeholder, and a GitHub icon link. No functionality yet — just the shell.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Set up React Query in <code>src/app/providers.tsx</code>: create a <code>QueryClientProvider</code> wrapper with a <code>QueryClient</code>. Import and use it in <code>layout.tsx</code>. Every data-fetching component will use this from now on.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/ui/Card.tsx</code> — a simple wrapper: <code>bg-surface border border-gold/15 rounded-lg p-4</code>. You'll use this for every stats panel on the dashboard.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// tailwind.config.ts — color tokens</span>
+<span class="kw">export default</span> {
+  content: [<span class="st">'./src/**/*.{ts,tsx}'</span>],
+  theme: {
+    extend: {
+      colors: {
+        gold:     <span class="st">'#C89B3C'</span>,
+        surface:  <span class="st">'#111318'</span>,
+        surface2: <span class="st">'#181C24'</span>,
+        dim:      <span class="st">'#5A5650'</span>,
+      },
+      fontFamily: {
+        mono: [<span class="st">'DM Mono'</span>, <span class="st">'monospace'</span>],
+      }
+    }
+  }
+}
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 2 Deliverable</div>
+      <p>Dark background, Navbar rendered, React Query provider wrapping the app. Color tokens available as Tailwind classes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day" id="day-3">
+  <div class="day-num-wrap"><div class="day-circle" data-n="3" onclick="toggleDay(3)"></div></div>
+  <div class="day-body" id="body-3">
+    <div class="day-top">
+      <div class="day-title">Summoner Search Page — Input + Debounce</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/app/page.tsx</code> as the home/search page. Replace the test code with a centered layout: app logo/name at top, a large search input below, and a region selector. This is the first thing users see.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Install debounce utility: <code>npm install use-debounce</code>. The search input should accept <code>Name#TAG</code> format. As the user types, debounce the value by 500ms before doing anything with it — this prevents firing on every keypress.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create a <code>RegionSelect</code> component — a styled <code>&lt;select&gt;</code> with options: EUW, EUNE, NA, KR, BR, JP. Map each display name to its platform value (<code>euw1</code>, <code>eun1</code>, <code>na1</code>, <code>kr</code>, <code>br1</code>, <code>jp1</code>). Default to EUW since that's your region.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Parse the search input: split on <code>#</code> to get <code>[gameName, tagLine]</code>. Validate that both parts exist before enabling the search button. Show an inline hint: <code>"Enter your Riot ID: Name#TAG"</code> below the input.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">On submit, call <code>searchSummoner()</code>. Handle two response cases: <code>status === "onboarding"</code> → show a loading state with a progress message, <code>status === "ready"</code> → redirect to <code>/summoner/{puuid}</code> immediately.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">For the onboarding case, poll <code>getTaskStatus(taskId)</code> every 2 seconds using <code>setInterval</code>. Update the message based on the status: <code>PENDING</code> → "Fetching summoner data...", <code>STARTED</code> → "Ingesting match history...", <code>SUCCESS</code> → redirect to the profile page.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// src/app/page.tsx — search submit handler</span>
+<span class="kw">const</span> <span class="fn">handleSearch</span> = <span class="kw">async</span> () => {
+  <span class="kw">const</span> [gameName, tagLine] = query.<span class="fn">split</span>(<span class="st">'#'</span>)
+  <span class="kw">if</span> (!gameName || !tagLine) <span class="kw">return</span>
+
+  <span class="fn">setLoading</span>(<span class="kw">true</span>)
+  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">searchSummoner</span>(gameName.<span class="fn">trim</span>(), tagLine.<span class="fn">trim</span>(), region)
+
+  <span class="kw">if</span> (result.status === <span class="st">'ready'</span>) {
+    router.<span class="fn">push</span>(<span class="st">`/summoner/${result.puuid}`</span>)
+    <span class="kw">return</span>
+  }
+
+  <span class="cm">// onboarding — poll until done</span>
+  <span class="kw">const</span> interval = <span class="fn">setInterval</span>(<span class="kw">async</span> () => {
+    <span class="kw">const</span> status = <span class="kw">await</span> <span class="fn">getTaskStatus</span>(result.task_id!)
+    <span class="fn">setStatusMessage</span>(status.message)
+    <span class="kw">if</span> (status.status === <span class="st">'SUCCESS'</span>) {
+      <span class="fn">clearInterval</span>(interval)
+      router.<span class="fn">push</span>(<span class="st">`/summoner/${result.puuid}`</span>)
+    }
+  }, <span class="num">2000</span>)
+}
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 3 Deliverable</div>
+      <p>Search page functional. Typing "G2 Caps#1323" + EUW and hitting search either redirects immediately (already ingested) or shows a polling loading state then redirects.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day" id="day-4">
+  <div class="day-num-wrap"><div class="day-circle" data-n="4" onclick="toggleDay(4)"></div></div>
+  <div class="day-body" id="body-4">
+    <div class="day-top">
+      <div class="day-title">New FastAPI Endpoints — Stats Queries</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-code">Code</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Before building the profile page UI, you need the data endpoints. Add <code>GET /api/v1/summoners/{puuid}/matches</code> to your FastAPI router. Accept query params: <code>limit=20</code>, <code>offset=0</code>. Return paginated match list with per-match stats for the given puuid.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">The matches query joins <code>match_participants</code> + <code>matches</code> on <code>gameId</code>, filters by <code>puuid</code>, orders by <code>gameStartTimestamp DESC</code>. Return: <code>gameId</code>, <code>championId</code>, <code>kills</code>, <code>deaths</code>, <code>assists</code>, <code>win</code>, <code>gameDuration</code>, <code>gameStartTimestamp</code>, <code>individualPosition</code>, <code>cs_per_min</code> (from challenges JSONB).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/champion-stats</code>. Aggregate by <code>championId</code>: <code>COUNT(*) as games</code>, <code>AVG(kills)</code>, <code>AVG(deaths)</code>, <code>AVG(assists)</code>, <code>ROUND(AVG(CASE WHEN win THEN 1.0 ELSE 0.0 END) * 100, 1) as winrate</code>. Filter to only champions with ≥ 3 games. Order by <code>games DESC</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>GET /api/v1/summoners/{puuid}/stats-overview</code>. Return overall stats: total games, overall winrate, average KDA, most played champion ID, current win streak (count consecutive wins from most recent game backwards).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Cache all three new endpoints with Redis TTL 300s. Add cache invalidation for all three keys in the <code>refresh_summoner</code> task — same pattern as the summoner profile cache.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add typed wrappers to <code>src/lib/api.ts</code>: <code>getMatches(puuid, limit, offset)</code>, <code>getChampionStats(puuid)</code>, <code>getStatsOverview(puuid)</code>. Define TypeScript interfaces for each response shape.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm"># backend — champion stats query</span>
+<span class="kw">from</span> sqlalchemy <span class="kw">import</span> func, case
+
+stats = <span class="kw">await</span> session.<span class="fn">execute</span>(
+    <span class="fn">select</span>(
+        MatchParticipant.championId,
+        func.<span class="fn">count</span>().<span class="fn">label</span>(<span class="st">'games'</span>),
+        func.<span class="fn">avg</span>(MatchParticipant.kills).<span class="fn">label</span>(<span class="st">'avg_kills'</span>),
+        func.<span class="fn">avg</span>(MatchParticipant.deaths).<span class="fn">label</span>(<span class="st">'avg_deaths'</span>),
+        func.<span class="fn">avg</span>(MatchParticipant.assists).<span class="fn">label</span>(<span class="st">'avg_assists'</span>),
+        (func.<span class="fn">avg</span>(<span class="fn">case</span>((MatchParticipant.win, <span class="num">1.0</span>), else_=<span class="num">0.0</span>)) * <span class="num">100</span>).<span class="fn">label</span>(<span class="st">'winrate'</span>),
+    )
+    .<span class="fn">where</span>(MatchParticipant.puuid == puuid)
+    .<span class="fn">group_by</span>(MatchParticipant.championId)
+    .<span class="fn">having</span>(func.<span class="fn">count</span>() >= <span class="num">3</span>)
+    .<span class="fn">order_by</span>(func.<span class="fn">count</span>().<span class="fn">desc</span>())
+)
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 4 Deliverable</div>
+      <p>Three new endpoints returning real data. Test each with curl. <code>/champion-stats</code> should return your most-played champions with winrates.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 5 -->
+<div class="day" id="day-5">
+  <div class="day-num-wrap"><div class="day-circle" data-n="5" onclick="toggleDay(5)"></div></div>
+  <div class="day-body" id="body-5">
+    <div class="day-top">
+      <div class="day-title">Champion Data — CDragon Integration</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Your DB stores champion IDs (integers) but the UI needs names and images. CDragon is the free, no-auth alternative to the official Data Dragon. Fetch champion data from: <code>https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json</code> — this gives you ID → name + image mapping.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/lib/champions.ts</code>. Fetch and cache the champion list at build time using Next.js fetch caching: <code>fetch(url, { next: { revalidate: 86400 } })</code> — revalidates daily. Export a <code>getChampionById(id: number)</code> helper and a <code>getChampionImageUrl(id: number)</code> helper.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Champion images come from Data Dragon CDN: <code>https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/{ChampionName}.png</code>. You need the patch version — fetch it from <code>https://ddragon.leagueoflegends.com/api/versions.json</code> and use <code>versions[0]</code> (the latest). Cache this too.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/ui/ChampionIcon.tsx</code>. Props: <code>championId: number</code>, <code>size?: number</code>. Renders the champion portrait image with a gold ring border and a tooltip showing the champion name. Use Next.js <code>&lt;Image&gt;</code> component with <code>width</code> and <code>height</code> props.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add <code>ddragon.leagueoflegends.com</code> and <code>cdn.merakianalytics.com</code> to <code>next.config.ts</code> under <code>images.remotePatterns</code> — Next.js blocks external images by default.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// next.config.ts — allow external champion images</span>
+<span class="kw">const</span> nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: <span class="st">'https'</span>, hostname: <span class="st">'ddragon.leagueoflegends.com'</span> },
+      { protocol: <span class="st">'https'</span>, hostname: <span class="st">'cdn.merakianalytics.com'</span> },
+    ]
+  }
+}
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 5 Deliverable</div>
+      <p><code>getChampionById(157)</code> returns <code>{ name: "Yasuo", image: "Yasuo.png" }</code>. <code>&lt;ChampionIcon championId={157} /&gt;</code> renders the Yasuo portrait.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 2 -->
+<div class="week-header">
+  <span class="week-pill">Week 2</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 6–10 · Profile Page + Match History</span>
+</div>
+
+<!-- DAY 6 -->
+<div class="day" id="day-6">
+  <div class="day-num-wrap"><div class="day-circle" data-n="6" onclick="toggleDay(6)"></div></div>
+  <div class="day-body" id="body-6">
+    <div class="day-top">
+      <div class="day-title">Profile Page Shell + Stats Overview Header</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/app/summoner/[puuid]/page.tsx</code>. This is a server component — fetch summoner data and stats overview directly in the component body using your <code>getSummoner(puuid)</code> and <code>getStatsOverview(puuid)</code> API calls. No <code>useEffect</code> needed at this level.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Build the profile header section. Left side: summoner profile icon (from CDragon using <code>profileIconId</code>), summoner name (you don't have it in the DB — display the puuid shortened to 8 chars as a placeholder for now), and level badge. Right side: a "Refresh" button that calls <code>POST /summoners/{puuid}/refresh</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Below the header, render a stats overview row using your <code>Card</code> component. Four cards side by side: <strong>Total Games</strong>, <strong>Win Rate %</strong>, <strong>Avg KDA</strong>, <strong>Win Streak</strong>. These come from <code>getStatsOverview()</code>. Color-code winrate: green ≥ 55%, yellow 45–55%, red &lt; 45%.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a <code>Skeleton</code> loading component in <code>src/components/ui/Skeleton.tsx</code> — a pulsing grey rectangle using Tailwind's <code>animate-pulse</code>. Use it as the placeholder while data is loading in child components. This makes the page feel fast even when data isn't ready.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a Refresh button with loading state. When clicked: call the refresh endpoint, disable the button and show a spinner for 3 seconds, then re-enable. Use React Query's <code>invalidateQueries</code> to refetch data after refresh completes.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 6 Deliverable</div>
+      <p>Navigating to <code>/summoner/{puuid}</code> shows the profile header with icon, level, and four stats cards with real numbers.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 7 -->
+<div class="day" id="day-7">
+  <div class="day-num-wrap"><div class="day-circle" data-n="7" onclick="toggleDay(7)"></div></div>
+  <div class="day-body" id="body-7">
+    <div class="day-top">
+      <div class="day-title">Match History List — Recent 20 Games</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/matches/MatchList.tsx</code> as a client component (needs <code>"use client"</code>). Use React Query: <code>useQuery({ queryKey: ['matches', puuid], queryFn: () => getMatches(puuid, 20, 0) })</code>. Show skeleton rows while loading.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/matches/MatchRow.tsx</code>. Each row shows: a win/loss color bar on the left (green/red), champion icon, position badge, KDA (formatted as <code>5/2/8</code>), CS/min, game duration (formatted as <code>32m 14s</code>), and relative time ("3 hours ago") from <code>gameStartTimestamp</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Format game duration: <code>const mins = Math.floor(seconds / 60); const secs = seconds % 60</code>. Format relative time: use <code>Date.now() - gameStartTimestamp</code> and convert to "X hours ago" / "X days ago". Don't install a library for this — write a simple 10-line helper.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Calculate KDA ratio and display it below the raw K/D/A: <code>((kills + assists) / Math.max(deaths, 1)).toFixed(2)</code>. Color it: gold ≥ 4.0, white 2.0–4.0, dim &lt; 2.0.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a "Load More" button below the list. On click, fetch the next page (<code>offset += 20</code>) and append to the existing list. Use React Query's <code>fetchNextPage</code> or manually manage offset with <code>useState</code>.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 7 Deliverable</div>
+      <p>Profile page shows a list of 20 recent matches with champion icons, KDA, duration, and win/loss color coding. "Load More" fetches the next 20.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 8 -->
+<div class="day" id="day-8">
+  <div class="day-num-wrap"><div class="day-circle" data-n="8" onclick="toggleDay(8)"></div></div>
+  <div class="day-body" id="body-8">
+    <div class="day-top">
+      <div class="day-title">Champion Stats Table</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/stats/ChampionStatsTable.tsx</code>. Fetch data with <code>useQuery({ queryKey: ['champion-stats', puuid], queryFn: () => getChampionStats(puuid) })</code>. This is a client component.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Render a table with columns: champion icon + name, games played, win rate (as a mini bar), avg KDA, avg CS/min. Sort by games played descending by default. Show only the top 10 champions.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">The win rate mini bar: a grey background bar with a gold/green fill proportional to the win rate percentage. <code>width: {winrate}%</code> as inline style. Show the percentage number on the right. This is more scannable than just a number.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Make columns sortable — clicking a column header sorts by that column. Toggle between ascending/descending on second click. Show a small arrow indicator next to the active sort column. Use <code>useState</code> for <code>sortKey</code> and <code>sortDir</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a "minimum games" filter — a small input or slider above the table defaulting to 3. Filtering in the frontend is fine here since you're only showing top 10-20 champions. Re-filter the data array when this value changes.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 8 Deliverable</div>
+      <p>Champion stats table showing top 10 champions with icons, sortable columns, and mini win rate bars. Clicking "games" column header re-sorts the table.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 9 -->
+<div class="day" id="day-9">
+  <div class="day-num-wrap"><div class="day-circle" data-n="9" onclick="toggleDay(9)"></div></div>
+  <div class="day-body" id="body-9">
+    <div class="day-top">
+      <div class="day-title">KDA Trend Line Chart — Recharts</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a new FastAPI endpoint: <code>GET /api/v1/summoners/{puuid}/kda-trend?limit=20</code>. Returns the last N games in chronological order (oldest first) with: <code>game_index</code>, <code>kda</code>, <code>kills</code>, <code>deaths</code>, <code>assists</code>, <code>win</code>, <code>champion_id</code>, <code>game_start</code>. This feeds the trend chart.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/KDATrendChart.tsx</code>. Use Recharts <code>LineChart</code> with a single <code>Line</code> for KDA ratio. X-axis: game index (1, 2, 3...). Y-axis: KDA value. Add a reference line at y=3 (solid carry threshold) and y=1 (break-even). Wrap in <code>ResponsiveContainer width="100%" height={220}</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Style the chart to match your dark theme: <code>background: transparent</code>, grid lines in <code>rgba(200,155,60,0.1)</code>, axis text in <code>#5A5650</code>, line stroke in <code>#C89B3C</code>. Pass these as props to Recharts components.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a custom tooltip: on hover, show a small card with the champion icon, exact K/D/A, KDA ratio, and win/loss result for that game. Use Recharts' <code>CustomTooltip</code> pattern — a component passed to the <code>&lt;Tooltip content={...}&gt;</code> prop.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Color each data point dot by win/loss: green dot for a win, red for a loss. Use Recharts <code>&lt;Dot&gt;</code> with a custom render function that reads the <code>win</code> field from the payload.</span></li>
+    </ul>
+    <div class="snippet">
+<span class="cm">// KDA trend — custom colored dots</span>
+<span class="tag">&lt;Line</span>
+  <span class="attr">dataKey</span>=<span class="st">"kda"</span>
+  <span class="attr">stroke</span>=<span class="st">"#C89B3C"</span>
+  <span class="attr">strokeWidth</span>={<span class="num">2</span>}
+  <span class="attr">dot</span>={({ cx, cy, payload }) => (
+    <span class="tag">&lt;circle</span>
+      <span class="attr">key</span>={cx}
+      <span class="attr">cx</span>={cx} <span class="attr">cy</span>={cy} <span class="attr">r</span>={<span class="num">4</span>}
+      <span class="attr">fill</span>={payload.win ? <span class="st">'#4CAF72'</span> : <span class="st">'#E8523C'</span>}
+      <span class="attr">stroke</span>=<span class="st">"none"</span>
+    <span class="tag">/&gt;</span>
+  )}
+<span class="tag">/&gt;</span>
+    </div>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 9 Deliverable</div>
+      <p>KDA trend chart showing last 20 games with colored dots (green/red), reference lines, and a custom tooltip showing champion + K/D/A on hover.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 10 -->
+<div class="day" id="day-10">
+  <div class="day-num-wrap"><div class="day-circle" data-n="10" onclick="toggleDay(10)"></div></div>
+  <div class="day-body" id="body-10">
+    <div class="day-top">
+      <div class="day-title">Win Rate by Champion — Bar Chart</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/WinRateChart.tsx</code>. Reuse data from <code>getChampionStats()</code> — you already have it cached. Take the top 8 champions by games played and display their win rates as a horizontal bar chart.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Use Recharts <code>BarChart</code> with <code>layout="vertical"</code> for horizontal bars. Y-axis: champion names. X-axis: win rate percentage (0–100). Add a reference line at x=50 to show the 50% threshold clearly.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Color bars dynamically: use Recharts <code>Cell</code> inside <code>Bar</code> to set individual bar colors. Green for winrate ≥ 55%, yellow for 45–55%, red for &lt; 45%. This makes underperforming champions jump out immediately.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a "minimum games" filter (3/5/10 as radio buttons or a small tab group) above the chart. Filter the champion data array before passing to the chart. This prevents one-game flukes from showing 100% winrate and skewing the chart.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Show the games played count inside or beside each bar as a label: <code>"12 games"</code>. This gives context — a 60% winrate on 3 games is not the same as 60% on 40 games. Use Recharts <code>&lt;LabelList&gt;</code> or a custom label render.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 10 Deliverable</div>
+      <p>Horizontal bar chart showing win rate per champion, color-coded by performance tier, with game count labels and a 50% reference line.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- WEEK 3 -->
+<div class="week-header">
+  <span class="week-pill">Week 3</span>
+  <div class="week-line"></div>
+  <span class="week-sub">Days 11–14 · Polish + Performance + Page Assembly</span>
+</div>
+
+<!-- DAY 11 -->
+<div class="day" id="day-11">
+  <div class="day-num-wrap"><div class="day-circle" data-n="11" onclick="toggleDay(11)"></div></div>
+  <div class="day-body" id="body-11">
+    <div class="day-top">
+      <div class="day-title">Performance vs Rank Scatter Plot</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-chart">Chart</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a FastAPI endpoint: <code>GET /api/v1/summoners/{puuid}/performance-scatter</code>. Returns all games for the summoner as individual data points: <code>{ kda, winrate_contribution, champion_id, win, game_duration }</code>. <code>winrate_contribution</code> = damage_share from the challenges JSONB column.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Create <code>src/components/charts/PerformanceScatter.tsx</code>. Use Recharts <code>ScatterChart</code>. X-axis: KDA ratio. Y-axis: damage share (0–1, formatted as %). Each dot = one game. Dot size = game duration (bigger = longer game). Color = win (green) or loss (red).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add quadrant labels in the four corners: top-right = "Efficient Carry", top-left = "High Impact Low KDA", bottom-right = "Safe Low Impact", bottom-left = "Underperforming". Draw faint dotted lines at the median KDA and median damage share to create the quadrant boundaries.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Custom tooltip on hover: show champion icon, K/D/A, damage share %, game duration, and win/loss. Same pattern as the KDA chart tooltip — a small card positioned near the hovered dot.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a champion filter dropdown above the chart — "All Champions" or filter to a specific champion. When a champion is selected, only show their games in the scatter. This is a pure frontend filter on the fetched data array.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 11 Deliverable</div>
+      <p>Scatter plot showing all games as dots with quadrant labels. Hovering a dot shows the full game context. Champion filter narrows the view.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 12 -->
+<div class="day" id="day-12">
+  <div class="day-num-wrap"><div class="day-circle" data-n="12" onclick="toggleDay(12)"></div></div>
+  <div class="day-body" id="body-12">
+    <div class="day-top">
+      <div class="day-title">Profile Page Assembly — Full Layout</div>
+      <div class="day-meta"><span class="time-pill">~2 hrs</span><span class="focus-pill fp-ui">UI</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Assemble the full profile page layout. Left column (60%): match history list + KDA trend chart stacked vertically. Right column (40%): champion stats table + win rate chart stacked vertically. Use CSS Grid: <code>grid-template-columns: 3fr 2fr; gap: 24px</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a tab bar below the profile header with three tabs: "Overview" (current layout), "Champions" (champion stats + win rate chart full width), "Performance" (scatter plot full width). Use <code>useState</code> to track active tab and conditionally render each section.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Make the layout responsive: on mobile (<code>md:</code> breakpoint), switch from 2-column to single column. The match list stacks above the stats. Use Tailwind's responsive prefixes: <code>grid-cols-1 md:grid-cols-5</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add section headers above each component — styled consistently: a small gold monospace label above each card like <code>// RECENT MATCHES</code>, <code>// KDA TREND</code>, <code>// CHAMPION STATS</code>. These act as visual anchors.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Handle the error state: if the summoner isn't found (404 from API), show a friendly "Summoner not found" page with a link back to search. Use Next.js <code>notFound()</code> in the server component, or an error boundary in client components.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 12 Deliverable</div>
+      <p>Complete profile page with tabs, two-column layout, all four components assembled. Looks good on both desktop and mobile.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 13 -->
+<div class="day" id="day-13">
+  <div class="day-num-wrap"><div class="day-circle" data-n="13" onclick="toggleDay(13)"></div></div>
+  <div class="day-body" id="body-13">
+    <div class="day-top">
+      <div class="day-title">Loading States, Error Handling & Empty States</div>
+      <div class="day-meta"><span class="time-pill">~1.5 hrs</span><span class="focus-pill fp-test">Polish</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Every component that fetches data needs three states: loading (skeleton), error (error message + retry button), and empty (no data message). Go through each component — <code>MatchList</code>, <code>ChampionStatsTable</code>, <code>KDATrendChart</code>, <code>WinRateChart</code> — and make sure all three are handled.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Empty state for match list: "No matches found. This summoner hasn't played ranked recently." Empty state for champion stats: "Play at least 3 ranked games on a champion to see stats here." These messages help new users understand the data requirements.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a global error boundary in <code>src/app/error.tsx</code>. This catches unhandled errors during rendering and shows a friendly fallback instead of a white crash screen. Include a "Try again" button that calls <code>reset()</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Add a loading page in <code>src/app/summoner/[puuid]/loading.tsx</code>. This is Next.js's built-in streaming loading state — it shows automatically while the server component fetches data. Use your <code>Skeleton</code> component to mock the full profile page layout.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Test edge cases: search a summoner with very few games (2–3 matches). Does the chart handle small datasets gracefully? Does the table show the "minimum games" empty state? Fix any crashes from empty arrays or null values.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Day 13 Deliverable</div>
+      <p>No white screens on any error. Loading skeletons match the actual layout. Empty states give clear guidance. Summoner with 5 games doesn't crash anything.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 14 -->
+<div class="day" id="day-14">
+  <div class="day-num-wrap"><div class="day-circle" data-n="14" onclick="toggleDay(14)"></div></div>
+  <div class="day-body" id="body-14">
+    <div class="day-top">
+      <div class="day-title">Phase 3 Wrap-Up + Phase 4 Prep</div>
+      <div class="day-meta"><span class="time-pill">~1 hr</span><span class="focus-pill fp-setup">Setup</span></div>
+    </div>
+    <ul class="tasks">
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Full end-to-end test: search a summoner from scratch, watch the onboarding flow, land on the profile page, interact with all three tabs, hover all chart tooltips, sort the champion table, load more matches. Everything should work without any console errors.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Run Lighthouse in Chrome DevTools on the profile page. Target: Performance ≥ 70, Accessibility ≥ 90. Common quick wins: add <code>alt</code> text to all images, ensure color contrast on dim text, add <code>aria-label</code> to icon-only buttons.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Clean up the codebase: remove the test <code>console.log(result)</code> from page.tsx, remove any hardcoded summoner names, make sure all components have TypeScript types (no <code>any</code> that can be avoided).</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Commit and tag: <code>git add -A && git commit -m "feat: phase 3 complete — core dashboard UI"</code> then <code>git tag v0.3-phase3-complete</code>.</span></li>
+      <li onclick="toggleTask(this)"><div class="task-check"></div><span class="task-text">Preview Phase 4 (Advanced Analytics): read the blueprint section on gold curve comparison, vision score impact, damage share vs gold share, and champion matchup matrix. Skim the Recharts D3 docs for area charts and brush components — you'll need those.</span></li>
+    </ul>
+    <div class="deliverable">
+      <div class="dlabel">✦ Phase 3 Complete</div>
+      <p>Fully functional dashboard: search → onboarding → profile with match history, champion stats table, KDA trend chart, win rate chart, and scatter plot. All dark-themed, responsive, and talking to live FastAPI data.</p>
+    </div>
+  </div>
+</div>
+
+<footer>Phase 3 of 6 — League of Legends Analytics Dashboard · Click any day circle to mark complete</footer>
+
+<script>
+  const STORAGE_KEY = 'lol_phase3_progress';
+  function loadState(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{return{}}}
+  function saveState(s){localStorage.setItem(STORAGE_KEY,JSON.stringify(s))}
+  let state = loadState();
+  function toggleDay(n){state[`day_${n}`]=!state[`day_${n}`];saveState(state);renderDay(n);updateStats();}
+  function toggleTask(li){li.classList.toggle('checked');updateStats();}
+  function renderDay(n){
+    const c=document.querySelector(`#day-${n} .day-circle`);
+    const b=document.getElementById(`body-${n}`);
+    const done=!!state[`day_${n}`];
+    c.classList.toggle('done',done);b.classList.toggle('done',done);
+  }
+  function updateStats(){
+    const total=14;
+    const done=Object.values(state).filter(Boolean).length;
+    const tasksDone=document.querySelectorAll('.tasks li.checked').length;
+    document.getElementById('pct-label').textContent=`${done} / ${total} days complete`;
+    document.getElementById('progress-fill').style.width=`${(done/total)*100}%`;
+    document.getElementById('tasks-done').textContent=tasksDone;
+    const end=new Date();end.setDate(end.getDate()+(total-done));
+    document.getElementById('end-date').textContent=end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  for(let i=1;i<=14;i++)renderDay(i);
+  updateStats();
+</script>
+</body>
+</html>

@@ -123,7 +123,10 @@ async def upsert_participants(
                 "championId": participant.championId,
                 "teamId": participant.teamId,
                 "individualPosition": participant.individualPosition,
+                "teamPosition": participant.teamPosition or participant.individualPosition,
                 "win": participant.win,
+                "summoner1Id": participant.summoner1Id,
+                "summoner2Id": participant.summoner2Id,
                 "challenges": challenges_payload,
                 "perks": participant.perks,
             }

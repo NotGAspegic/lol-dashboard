@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi.responses import JSONResponse
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import select,func, case, text
 from sqlalchemy.orm import aliased
 from models.db import Summoner, Match, MatchParticipant
@@ -21,7 +22,17 @@ try:
     from ..config import settings
     from ..database import get_db_session, test_connection
     from ..models.db import Summoner
+    from ..ml.model_registry import (
+        DRAFT_FEATURES_PATH,
+        DRAFT_META_PATH,
+        DRAFT_MODEL_PATH,
+        TILT_FEATURES_PATH,
+        TILT_META_PATH,
+        TILT_MODEL_PATH,
+        load_model_registry,
+    )
     from ..ml.predictors.tilt_predictor import predict_tilt as run_tilt_prediction
+    from ..ml.predictors.draft_predictor import predict_draft_win as run_draft_prediction
     from ..riot.client import RiotClient
     from ..worker.celery_app import celery_app
     from ..worker.tasks.refresh import onboard_summoner, refresh_summoner
@@ -29,7 +40,17 @@ except ImportError:
     from config import settings
     from database import get_db_session, test_connection
     from models.db import Summoner
+    from ml.model_registry import (
+        DRAFT_FEATURES_PATH,
+        DRAFT_META_PATH,
+        DRAFT_MODEL_PATH,
+        TILT_FEATURES_PATH,
+        TILT_META_PATH,
+        TILT_MODEL_PATH,
+        load_model_registry,
+    )
     from ml.predictors.tilt_predictor import predict_tilt as run_tilt_prediction
+    from ml.predictors.draft_predictor import predict_draft_win as run_draft_prediction
     from riot.client import RiotClient
     from worker.celery_app import celery_app
     from worker.tasks.refresh import onboard_summoner, refresh_summoner
@@ -87,6 +108,46 @@ class TiltPredictionResponse(BaseModel):
     tilt_level: str
     reasons: list[str]
     games_analyzed: int
+
+
+class DraftPredictionRequest(BaseModel):
+    """Input payload for draft win probability prediction."""
+
+    puuid: str
+    ally_champion_ids: list[int]
+    enemy_champion_ids: list[int]
+    player_champion_id: int
+
+    @field_validator("ally_champion_ids", "enemy_champion_ids")
+    @classmethod
+    def validate_team_champion_ids(cls, value: list[int]) -> list[int]:
+        if len(value) != 5:
+            raise ValueError("must contain exactly 5 champion ids")
+        if len(set(value)) != len(value):
+            raise ValueError("must not contain duplicate champion ids")
+        return value
+
+
+class DraftPredictionResponse(BaseModel):
+    """Draft win probability payload."""
+
+    win_probability: float
+    confidence: str
+    player_champion_games: int
+    player_champion_winrate: float
+    note: str
+
+
+class ModelStatus(BaseModel):
+    loaded: bool
+    trained_at: str
+    test_auc: float
+    training_samples: int
+    model_version: str
+
+
+class MLStatusResponse(BaseModel):
+    models: dict[str, ModelStatus]
 
 
 @router.get("/health")
@@ -339,6 +400,15 @@ def _tilt_level_from_score(score: float | None) -> str:
     return "low"
 
 
+def _require_model_files(paths: list[Path]) -> None:
+    missing = [str(path.name) for path in paths if not path.exists()]
+    if missing:
+        raise HTTPException(
+            status_code=503,
+            detail=f"missing model artifacts: {', '.join(missing)}",
+        )
+
+
 @router.get("/predict/tilt/{puuid}", response_model=TiltPredictionResponse)
 async def predict_tilt_endpoint(
     puuid: str,
@@ -361,6 +431,68 @@ async def predict_tilt_endpoint(
         await cache_set(redis, cache_key, payload.model_dump(), ttl=1800)
 
     return payload
+
+
+@router.get("/ml/status", response_model=MLStatusResponse)
+async def get_ml_status() -> MLStatusResponse:
+    _require_model_files(
+        [
+            TILT_MODEL_PATH,
+            TILT_FEATURES_PATH,
+            TILT_META_PATH,
+            DRAFT_MODEL_PATH,
+            DRAFT_FEATURES_PATH,
+            DRAFT_META_PATH,
+        ]
+    )
+
+    try:
+        registry = load_model_registry()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="failed to load model registry") from exc
+
+    models = {
+        model_name: ModelStatus(
+            loaded=True,
+            trained_at=model_data["metadata"]["trained_at"],
+            test_auc=float(model_data["metadata"]["test_auc"]),
+            training_samples=int(model_data["metadata"]["training_samples"]),
+            model_version=str(model_data["metadata"]["model_version"]),
+        )
+        for model_name, model_data in registry.items()
+    }
+
+    return MLStatusResponse(models=models)
+
+
+@router.post("/predict/draft", response_model=DraftPredictionResponse)
+async def predict_draft_endpoint(
+    payload: DraftPredictionRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> DraftPredictionResponse:
+    if set(payload.ally_champion_ids).intersection(payload.enemy_champion_ids):
+        raise HTTPException(
+            status_code=422,
+            detail="ally_champion_ids and enemy_champion_ids cannot share champions",
+        )
+    if payload.player_champion_id not in payload.ally_champion_ids:
+        raise HTTPException(
+            status_code=422,
+            detail="player_champion_id must be included in ally_champion_ids",
+        )
+
+    try:
+        prediction = await run_draft_prediction(
+            puuid=payload.puuid,
+            ally_champion_ids=payload.ally_champion_ids,
+            enemy_champion_ids=payload.enemy_champion_ids,
+            player_champion_id=payload.player_champion_id,
+            session=session,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return DraftPredictionResponse(**prediction)
 
 @router.get("/tasks/{task_id}/status")
 async def get_task_status(task_id: str) -> JSONResponse:

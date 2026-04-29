@@ -29,6 +29,25 @@ def consecutive_losses(win_series: list[bool] | pd.Series) -> int:
     return count
 
 
+def _history_baseline_kda(ordered_games: pd.DataFrame, start_index: int, window: int) -> float:
+    """Return the leak-free KDA baseline available at this snapshot in time.
+
+    With newest-first ordering, rows after ``start_index + window`` are strictly
+    older than the current analysis window. Those games are the only baseline we
+    should use when labeling historical snapshots.
+    """
+
+    historical_games = ordered_games.iloc[start_index + window :].copy()
+    if historical_games.empty:
+        historical_games = ordered_games.iloc[start_index : start_index + window].copy()
+
+    historical_kda = (
+        (historical_games["kills"] + historical_games["assists"])
+        / historical_games["deaths"].clip(lower=1)
+    )
+    return float(historical_kda.mean())
+
+
 @dataclass(frozen=True)
 class TiltFeatureWindow:
     snapshot_index: int
@@ -80,7 +99,6 @@ def compute_tilt_features(games_df: pd.DataFrame, window: int = 10) -> pd.DataFr
     ordered = games_df.sort_values("gameStartTimestamp", ascending=False).reset_index(drop=True).copy()
     ordered["kda"] = (ordered["kills"] + ordered["assists"]) / ordered["deaths"].clip(lower=1)
 
-    career_kda = float(((ordered["kills"] + ordered["assists"]) / ordered["deaths"].clip(lower=1)).mean())
     rows: list[dict[str, float | int]] = []
 
     if len(ordered) < window:
@@ -94,6 +112,7 @@ def compute_tilt_features(games_df: pd.DataFrame, window: int = 10) -> pd.DataFr
         window_kda = snapshot["kda"].to_numpy(dtype=float)
         window_win_rate = float(snapshot["win"].mean())
         avg_kda_window = float(window_kda.mean())
+        career_kda = _history_baseline_kda(ordered, i, window)
         consecutive = consecutive_losses(snapshot["win"].tolist())
         tilt_label = int(consecutive >= 3 and avg_kda_window <= career_kda * 0.8)
 

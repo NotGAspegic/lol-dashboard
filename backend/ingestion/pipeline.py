@@ -107,11 +107,12 @@ def _validate_timeline_payload(timeline_payload: dict[str, Any]) -> dict[str, An
     return {"frames": normalized_frames}
 
 
-async def ingest_match(match_id: str, region: str) -> bool:
+async def ingest_match(match_id: str, region: str, refresh_existing: bool = False) -> bool:
     """Ingest a single Riot match and its timeline into local storage.
 
-    Returns True when a new match is inserted, and False when skipped because
-    the match already exists.
+    Returns True when a new match is inserted. When ``refresh_existing`` is
+    enabled, existing matches are re-fetched and their participant/timeline
+    rows are rewritten instead of being skipped.
     """
     game_id = _extract_game_id(match_id)
     normalized_region = region.strip().lower()
@@ -120,7 +121,7 @@ async def ingest_match(match_id: str, region: str) -> bool:
 
     # Step 1: pre-check idempotency before making Riot API calls.
     async with AsyncSessionFactory() as session:
-        if await _match_exists(session, game_id):
+        if await _match_exists(session, game_id) and not refresh_existing:
             logger.warning(
                 "Skipping match; already exists before fetch (match_id=%s, game_id=%s, region=%s)",
                 match_id,
@@ -157,7 +158,7 @@ async def ingest_match(match_id: str, region: str) -> bool:
 
     # Steps 4 and 5: write to DB via upsert ops and commit.
     async with AsyncSessionFactory() as session:
-        if await _match_exists(session, game_id):
+        if await _match_exists(session, game_id) and not refresh_existing:
             logger.warning(
                 "Skipping match; already exists on recheck (match_id=%s, game_id=%s, region=%s)",
                 match_id,
@@ -167,7 +168,7 @@ async def ingest_match(match_id: str, region: str) -> bool:
             return False
 
         inserted = await upsert_match(session, match_dto)
-        if not inserted:
+        if not inserted and not refresh_existing:
             await session.rollback()
             logger.warning(
                 "Skipping match; upsert returned not inserted (match_id=%s, game_id=%s, region=%s)",
@@ -198,6 +199,7 @@ async def ingest_summoner(
     region: str,
     count: int = 20,
     queue: int = 420,
+    include_existing: bool = False,
     progress_callback: Callable[[int, int, str], None] | None = None,
 ) -> dict[str, Any]:
     """Ingest a summoner and sequentially ingest their recent matches.
@@ -289,7 +291,11 @@ async def ingest_summoner(
         attempt = 0
         while True:
             try:
-                inserted = await ingest_match(recent_match_id, normalized_region)
+                inserted = await ingest_match(
+                    recent_match_id,
+                    normalized_region,
+                    refresh_existing=include_existing,
+                )
                 if inserted:
                     inserted_matches += 1
                 else:

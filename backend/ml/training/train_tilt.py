@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -16,6 +17,16 @@ from ml.features.tilt_features import compute_tilt_features
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
+
+
+@dataclass
+class TiltTrainingArtifacts:
+    pipeline: Pipeline
+    feature_columns: list[str]
+    dataset_rows: int
+    train_rows: int
+    test_rows: int
+    test_auc: float
 
 
 def load_training_frame(window: int = 10) -> pd.DataFrame:
@@ -55,11 +66,9 @@ def load_training_frame(window: int = 10) -> pd.DataFrame:
     return pd.concat(feature_frames, ignore_index=True)
 
 
-def main() -> None:
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-
+def train_tilt_model(window: int = 10) -> TiltTrainingArtifacts:
     print("Building tilt training dataset...", flush=True)
-    dataset = load_training_frame(window=10)
+    dataset = load_training_frame(window=window)
     print(
         f"Built tilt dataset with {len(dataset)} rows from {dataset['puuid'].nunique()} summoners",
         flush=True,
@@ -132,14 +141,32 @@ def main() -> None:
     print("Classification report:", flush=True)
     print(report, flush=True)
 
+    return TiltTrainingArtifacts(
+        pipeline=pipeline,
+        feature_columns=feature_columns,
+        dataset_rows=len(dataset),
+        train_rows=len(train_df),
+        test_rows=len(test_df),
+        test_auc=float(auc),
+    )
+
+
+def save_tilt_artifacts(artifacts: TiltTrainingArtifacts) -> tuple[Path, Path]:
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
     model_path = MODELS_DIR / "tilt_v1.pkl"
     features_path = MODELS_DIR / "tilt_v1_features.json"
 
-    dump(pipeline, model_path)
-    features_path.write_text(json.dumps(feature_columns, indent=2))
+    dump(artifacts.pipeline, model_path)
+    features_path.write_text(json.dumps(artifacts.feature_columns, indent=2) + "\n")
 
     print(f"Saved model to {model_path}", flush=True)
     print(f"Saved feature names to {features_path}", flush=True)
+    return model_path, features_path
+
+
+def main() -> None:
+    artifacts = train_tilt_model(window=10)
+    save_tilt_artifacts(artifacts)
 
 
 if __name__ == "__main__":

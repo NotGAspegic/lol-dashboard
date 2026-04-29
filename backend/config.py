@@ -43,6 +43,17 @@ class Settings(BaseSettings):
 			raise ValueError("DATABASE_URL must be a PostgreSQL URL")
 		return value
 
+	@field_validator("debug", mode="before")
+	@classmethod
+	def normalize_debug_flag(cls, value: object) -> object:
+		if isinstance(value, str):
+			normalized = value.strip().lower()
+			if normalized in {"release", "prod", "production"}:
+				return False
+			if normalized in {"dev", "development"}:
+				return True
+		return value
+
 	@property
 	def sync_database_url(self) -> str:
 		"""Sync DB URL for tools/drivers that do not support asyncpg dialect."""

@@ -11,7 +11,7 @@ try:
     from ..features.shap_reasons import top_reasons
     from ..features.tilt_features import compute_tilt_features
     from ..model_registry import load_model_registry
-    from models.db import Match, MatchParticipant
+    from ..models.db import Match, MatchParticipant
 except ImportError:
     from ml.features.shap_reasons import top_reasons
     from ml.features.tilt_features import compute_tilt_features
