@@ -20,8 +20,22 @@ interface GoldDiffChartProps {
 export default function GoldDiffChart({ data }: GoldDiffChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="text-dim text-sm">
-        No gold data available.
+      <div className="w-full h-94 rounded-lg border border-primary/20 bg-surface2/30 p-4">
+        <div className="flex h-full flex-col justify-between rounded-md border border-dashed border-primary/15 bg-surface/40 px-5 py-6">
+          <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-dim">
+            Gold Timeline
+          </div>
+          <div className="space-y-2 text-center">
+            <div className="text-lg font-semibold text-white">Timeline unavailable</div>
+            <div className="mx-auto max-w-xs text-sm leading-relaxed text-dim">
+              We still have the scoreboard stats for this match, but minute-by-minute gold swings
+              need stored Riot timeline frames.
+            </div>
+          </div>
+          <div className="text-center text-xs font-mono uppercase tracking-[0.18em] text-primary/60">
+            Match story falls back to combat and team stats
+          </div>
+        </div>
       </div>
     );
   }

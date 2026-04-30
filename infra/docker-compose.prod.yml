@@ -1,0 +1,32 @@
+services:
+  postgres:
+    restart: always
+
+  redis:
+    restart: always
+
+  flower:
+    restart: always
+    volumes: !reset []
+
+  api:
+    restart: always
+    volumes: !reset []
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
+
+  worker:
+    restart: always
+    volumes: !reset []
+    mem_limit: 512m
+
+  priority_worker:
+    restart: always
+    volumes: !reset []
+    mem_limit: 512m
+
+  beat:
+    restart: always
+    volumes: !reset []
+
+  adminer:
+    restart: always

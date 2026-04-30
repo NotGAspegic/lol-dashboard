@@ -7,6 +7,7 @@ import { useDebounce } from "use-debounce";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
+import FavoriteSummonerCard from "@/components/ui/FavoriteSummonerCard";
 import RegionSelect from "@/components/ui/RegionSelect";
 import { getSummonerSuggestions, searchSummoner, getTaskStatus } from "@/lib/api";
 import { buildSummonerProfilePath } from "@/lib/summonerRoute";
@@ -272,40 +273,13 @@ export default function Home() {
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {favorites.map((favorite) => (
-                <div
+                <FavoriteSummonerCard
                   key={favorite.puuid}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-surface2/65 px-3 py-3 transition-colors hover:border-primary/30 hover:bg-surface2"
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.push(
-                        buildSummonerProfilePath({
-                          puuid: favorite.puuid,
-                          region: favorite.region ?? undefined,
-                          gameName: favorite.gameName,
-                          tagLine: favorite.tagLine,
-                        })
-                      )
-                    }
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <div className="truncate text-sm font-semibold text-white">
-                      {favorite.gameName}#{favorite.tagLine}
-                    </div>
-                    <div className="truncate text-xs font-mono uppercase tracking-wide text-dim">
-                      {favorite.region?.toUpperCase() ?? "Unknown"}{favorite.summonerLevel ? ` • level ${favorite.summonerLevel}` : ""}
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Remove favorite"
-                    onClick={(event) => handleFavoriteToggle(event, favorite)}
-                    className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-amber-300 transition-colors hover:bg-amber-400/15"
-                  >
-                    <Star className="h-3.5 w-3.5" fill="currentColor" />
-                  </button>
-                </div>
+                  favorite={favorite}
+                  onRemove={() =>
+                    toggleFavoriteSummoner(favorite)
+                  }
+                />
               ))}
             </div>
           </div>

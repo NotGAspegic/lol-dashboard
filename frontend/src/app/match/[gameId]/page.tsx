@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ChampionIconClient from "@/components/ui/ChampionIconClient";
 import GoldDiffChart from "@/components/charts/GoldDiffChart";
+import DataFreshnessBadge from "@/components/ui/DataFreshnessBadge";
 import { getMatchDetail, getMatchGoldDiff, getSummoner } from "@/lib/api";
 import { buildSummonerProfilePath } from "@/lib/summonerRoute";
 
@@ -24,14 +25,38 @@ function kdaColor(kda: number): string {
   return "text-dim";
 }
 
+function percent(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "0%";
+  }
+
+  const normalized = Math.abs(value) <= 1 ? value * 100 : value;
+  return `${Math.round(normalized)}%`;
+}
+
+const ROLE_META: Record<string, { label: string; accent: string }> = {
+  TOP: { label: "Top", accent: "rgba(77,184,255,0.92)" },
+  JUNGLE: { label: "Jungle", accent: "rgba(52,199,89,0.92)" },
+  MIDDLE: { label: "Mid", accent: "rgba(200,107,255,0.92)" },
+  BOTTOM: { label: "Bot", accent: "rgba(232,82,60,0.92)" },
+  UTILITY: { label: "Support", accent: "rgba(69,197,161,0.92)" },
+};
+
+function roleLabel(role: string): string {
+  return ROLE_META[role]?.label ?? (role || "Unknown");
+}
+
 interface ParticipantRowProps {
   champion_id: number;
-  display_name: string;
+  game_name: string;
+  tag_line?: string | null;
   profile_href: string;
+  role: string;
   kills: number;
   deaths: number;
   assists: number;
   damage: number;
+  damage_share: number;
   gold: number;
   vision: number;
   is_current_player: boolean;
@@ -40,12 +65,15 @@ interface ParticipantRowProps {
 
 function ParticipantRow({
   champion_id,
-  display_name,
+  game_name,
+  tag_line,
   profile_href,
+  role,
   kills,
   deaths,
   assists,
   damage,
+  damage_share,
   gold,
   vision,
   is_current_player,
@@ -66,21 +94,51 @@ function ParticipantRow({
       <td className="px-3 py-3 flex items-center gap-2">
         <ChampionIconClient championId={champion_id} size={32} />
       </td>
-      <td className="px-3 py-3 text-sm font-mono text-dim">
-        <Link href={profile_href} className="hover:text-white transition-colors">
-          {display_name}
+      <td className="px-3 py-3">
+        <Link
+          href={profile_href}
+          className="group inline-flex min-w-0 flex-col rounded-md border border-transparent px-2 py-1 transition-colors hover:border-primary/20 hover:bg-primary/5"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-semibold text-white transition-colors group-hover:text-primary">
+              {game_name}
+            </span>
+            {tag_line ? (
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-primary/75">
+                #{tag_line}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-dim">
+            <span
+              className="rounded-full border px-2 py-0.5"
+              style={{
+                borderColor: `${ROLE_META[role]?.accent ?? "rgba(30,155,232,0.5)"}55`,
+                color: ROLE_META[role]?.accent ?? "#8FB9FF",
+              }}
+            >
+              {roleLabel(role)}
+            </span>
+            {is_current_player ? (
+              <span className="rounded-full border border-primary/25 bg-primary/15 px-2 py-0.5 text-primary">
+                You
+              </span>
+            ) : null}
+          </div>
         </Link>
-        {is_current_player && (
-          <span className="ml-2 inline-block text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
-            You
-          </span>
-        )}
       </td>
       <td className={`px-3 py-3 text-sm font-mono ${kdaColor(kda)}`}>
         {kills}/{deaths}/{assists}
       </td>
       <td className="px-3 py-3 text-sm font-mono text-dim text-right">
-        {damage.toLocaleString()}
+        <div>{damage.toLocaleString()}</div>
+        <div className="mt-1 h-1.5 w-20 overflow-hidden rounded-full bg-surface">
+          <div
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${Math.max(6, Math.min(100, Math.round((Math.abs(damage_share) <= 1 ? damage_share * 100 : damage_share))))}%` }}
+          />
+        </div>
+        <div className="mt-1 text-[10px] text-dim">{percent(damage_share)}</div>
       </td>
       <td className="px-3 py-3 text-sm font-mono text-dim text-right">
         {gold.toLocaleString()}
@@ -150,20 +208,22 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
           tagLine: summoner.tag_line,
         })
       : `/summoner/${participant.puuid}`;
-    const displayName = summoner?.game_name && summoner.tag_line
-      ? `${summoner.game_name}#${summoner.tag_line}`
-      : participant.puuid.slice(0, 8).toUpperCase();
+    const gameName = summoner?.game_name ?? participant.puuid.slice(0, 8).toUpperCase();
+    const tagLine = summoner?.tag_line ?? null;
 
     return (
       <ParticipantRow
         key={participant.puuid}
         champion_id={participant.championId}
-        display_name={displayName}
+        game_name={gameName}
+        tag_line={tagLine}
         profile_href={profileHref}
+        role={participant.individualPosition}
         kills={participant.kills}
         deaths={participant.deaths}
         assists={participant.assists}
         damage={participant.totalDamageDealtToChampions}
+        damage_share={participant.damage_share}
         gold={participant.goldEarned}
         vision={participant.visionScore}
         is_current_player={currentPuuid === participant.puuid}
@@ -189,6 +249,94 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
       : `/summoner/${currentPuuid}`;
   }
   const isBlueWin = match.match.winning_team === 100;
+  const winningTeam = isBlueWin ? blueTeamSorted : redTeamSorted;
+  const topCarry = winningTeam[0] ?? null;
+  const pressureAnchor = [...winningTeam].sort((left, right) => right.kill_participation - left.kill_participation)[0] ?? null;
+  const currentPlayer =
+    currentPuuid != null
+      ? [...match.blue_team, ...match.red_team].find((participant) => participant.puuid === currentPuuid) ?? null
+      : null;
+  const hasGoldTimeline = golds.length > 0;
+  const peakGoldPoint = hasGoldTimeline
+    ? golds.reduce(
+        (best, point) => (Math.abs(point.gold_diff) > Math.abs(best.gold_diff) ? point : best),
+        golds[0]
+      )
+    : null;
+  const finalGoldDiff = hasGoldTimeline ? golds.at(-1)?.gold_diff ?? null : null;
+  const blueDamage = match.blue_team.reduce((sum, participant) => sum + participant.totalDamageDealtToChampions, 0);
+  const redDamage = match.red_team.reduce((sum, participant) => sum + participant.totalDamageDealtToChampions, 0);
+  const teamDamageGap = Math.abs(blueDamage - redDamage);
+  const totalWinningKills = winningTeam.reduce((sum, participant) => sum + participant.kills, 0);
+  const blueKills = match.blue_team.reduce((sum, participant) => sum + participant.kills, 0);
+  const redKills = match.red_team.reduce((sum, participant) => sum + participant.kills, 0);
+  const blueGold = match.blue_team.reduce((sum, participant) => sum + participant.goldEarned, 0);
+  const redGold = match.red_team.reduce((sum, participant) => sum + participant.goldEarned, 0);
+  const blueObjectives = match.objectives.blue;
+  const redObjectives = match.objectives.red;
+  const objectiveWinner = [
+    { label: "Dragons", blue: blueObjectives.dragons, red: redObjectives.dragons },
+    { label: "Barons", blue: blueObjectives.barons, red: redObjectives.barons },
+    { label: "Heralds", blue: blueObjectives.heralds, red: redObjectives.heralds },
+    { label: "Turrets", blue: blueObjectives.turrets, red: redObjectives.turrets },
+    { label: "Plates", blue: blueObjectives.plates, red: redObjectives.plates },
+  ].filter((row) => row.blue > 0 || row.red > 0);
+  const whyWonLines = [
+    teamDamageGap > 0
+      ? `${blueDamage >= redDamage ? "Blue" : "Red"} created a ${teamDamageGap.toLocaleString()} damage edge`
+      : null,
+    objectiveWinner.length > 0
+      ? `${objectiveWinner
+          .filter((row) => row.blue !== row.red)
+          .map((row) => `${row.label} ${row.blue}-${row.red}`)
+          .slice(0, 2)
+          .join(" • ")}`
+      : null,
+    hasGoldTimeline && finalGoldDiff != null
+      ? `${finalGoldDiff > 0 ? "Blue" : "Red"} ended with ${Math.abs(finalGoldDiff).toLocaleString()} more gold`
+      : "Timeline missing, so this read leans on combat and objective pressure.",
+  ].filter(Boolean);
+  const narrativeCards = [
+    {
+      label: "Match Story",
+      title: hasGoldTimeline && finalGoldDiff != null
+        ? `${isBlueWin ? "Blue side" : "Red side"} closed with ${finalGoldDiff > 0 ? "+" : ""}${finalGoldDiff.toLocaleString()} gold`
+        : "No minute-by-minute gold timeline stored",
+      body: hasGoldTimeline && peakGoldPoint
+        ? `The largest gold separation hit ${Math.abs(peakGoldPoint.gold_diff).toLocaleString()} at ${peakGoldPoint.minute}m, which is where this game really opened up.`
+        : `We can still read the scoreboard cleanly: the winning side dealt ${Math.max(blueDamage, redDamage).toLocaleString()} champion damage and finished with the stronger combat profile.`,
+    },
+    topCarry
+      ? {
+          label: "Primary Carry",
+          title: `${summonerByPuuid.get(topCarry.puuid)?.game_name ?? topCarry.puuid.slice(0, 8)} drove the winning side`,
+          body: `${topCarry.kills}/${topCarry.deaths}/${topCarry.assists} with ${topCarry.totalDamageDealtToChampions.toLocaleString()} champion damage and ${percent(topCarry.damage_share)} damage share.`,
+        }
+      : null,
+    pressureAnchor
+      ? {
+          label: "Teamfight Engine",
+          title: `${summonerByPuuid.get(pressureAnchor.puuid)?.game_name ?? pressureAnchor.puuid.slice(0, 8)} touched most winning kills`,
+          body: `${percent(pressureAnchor.kill_participation)} kill participation across ${totalWinningKills} team kills made them the connective tissue in this draft.`,
+        }
+      : null,
+    {
+      label: "Why It Was Won",
+      title: `${isBlueWin ? "Blue" : "Red"} converted pressure better`,
+      body: whyWonLines.join(" "),
+    },
+    currentPlayer
+      ? {
+          label: "Your Read",
+          title: `${currentPlayer.kills}/${currentPlayer.deaths}/${currentPlayer.assists} on this patch sample`,
+          body: `${currentPlayer.cs_per_min.toFixed(1)} CS/min, ${percent(currentPlayer.damage_share)} damage share, and ${percent(currentPlayer.kill_participation)} kill participation for your slot.`,
+        }
+      : {
+          label: "Damage Split",
+          title: `Team damage gap landed at ${teamDamageGap.toLocaleString()}`,
+          body: "Use the scoreboards below to see whether this was decided by one carry or a broader team-wide advantage.",
+        },
+  ].filter(Boolean) as Array<{ label: string; title: string; body: string }>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -219,7 +367,31 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
               <div>Game ID: {gameId}</div>
             </div>
           </div>
+          {currentPuuid ? (
+            <div className="w-full sm:w-[280px]">
+              <DataFreshnessBadge puuid={currentPuuid} compact timelineMissing={!hasGoldTimeline} />
+            </div>
+          ) : null}
         </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {narrativeCards.map((card) => (
+          <div
+            key={card.label}
+            className="rounded-lg border border-primary/15 bg-surface2/35 p-4"
+          >
+            <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-dim">
+              {card.label}
+            </div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              {card.title}
+            </div>
+            <div className="mt-2 text-sm text-dim">
+              {card.body}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Main scoreboards + gold chart */}
@@ -227,7 +399,13 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
         {/* Blue team */}
         <div className="border border-primary/20 rounded-lg bg-surface2/30 overflow-hidden">
           <div className="bg-blue-500/10 border-b border-blue-500/20 px-4 py-3">
-            <h2 className="text-lg font-bold text-blue-400">Blue Team</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-blue-400">Blue Team</h2>
+              <div className="text-right text-[11px] font-mono uppercase tracking-wide text-blue-200/70">
+                <div>{blueKills} kills</div>
+                <div>{blueDamage.toLocaleString()} dmg • {blueGold.toLocaleString()} gold</div>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -259,14 +437,68 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
         </div>
 
         {/* Gold diff chart */}
-        <div className="lg:col-span-1 flex items-center justify-center">
+        <div className="lg:col-span-1 flex flex-col gap-3">
+          <div className="rounded-lg border border-primary/15 bg-surface2/30 px-4 py-3">
+            <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-dim">Center Read</div>
+            <div className="mt-2 text-sm font-semibold text-white">
+              {hasGoldTimeline
+                ? "Gold rhythm and team totals"
+                : "Combat read without timeline frames"}
+            </div>
+            <div className="mt-1 text-sm text-dim">
+              {hasGoldTimeline
+                ? "Use the center chart to see when tempo broke open, then compare the team tables for who cashed in."
+                : "Timeline data is missing for this match, so this page leans on scoreboard pressure, role lanes, and carry share instead."}
+            </div>
+          </div>
           <GoldDiffChart data={golds} />
+          <div className="rounded-lg border border-primary/15 bg-surface2/30 px-4 py-3">
+            <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-dim">Objective Summary</div>
+            {objectiveWinner.length > 0 ? (
+              <div className="mt-3 grid gap-2">
+                {objectiveWinner.map((row) => (
+                  <div key={row.label} className="flex items-center justify-between rounded-lg border border-primary/10 bg-surface px-3 py-2">
+                    <div className="text-xs font-mono uppercase tracking-wide text-dim">{row.label}</div>
+                    <div className="flex items-center gap-3 text-sm font-semibold text-white">
+                      <span className="text-blue-300">{row.blue}</span>
+                      <span className="text-dim">-</span>
+                      <span className="text-red-300">{row.red}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-dim">No objective summary was stored for this match.</div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-primary/10 bg-surface2/35 px-3 py-3">
+              <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Damage Edge</div>
+              <div className="mt-1 text-lg font-semibold text-white">{teamDamageGap.toLocaleString()}</div>
+              <div className="text-xs text-dim">
+                {blueDamage >= redDamage ? "Blue dealt more" : "Red dealt more"}
+              </div>
+            </div>
+            <div className="rounded-lg border border-primary/10 bg-surface2/35 px-3 py-3">
+              <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Kill Edge</div>
+              <div className="mt-1 text-lg font-semibold text-white">{Math.abs(blueKills - redKills)}</div>
+              <div className="text-xs text-dim">
+                {blueKills >= redKills ? "Blue secured more kills" : "Red secured more kills"}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Red team */}
         <div className="border border-primary/20 rounded-lg bg-surface2/30 overflow-hidden">
           <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3">
-            <h2 className="text-lg font-bold text-red-400">Red Team</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-red-400">Red Team</h2>
+              <div className="text-right text-[11px] font-mono uppercase tracking-wide text-red-200/70">
+                <div>{redKills} kills</div>
+                <div>{redDamage.toLocaleString()} dmg • {redGold.toLocaleString()} gold</div>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

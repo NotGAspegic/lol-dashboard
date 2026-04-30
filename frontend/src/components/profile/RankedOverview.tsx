@@ -159,6 +159,16 @@ function isSameCalendarDay(left: string, right: string): boolean {
   );
 }
 
+function countSnapshotDays(history: RankHistoryPoint[]): number {
+  return new Set(
+    history.map((point) => {
+      const date = new Date(point.captured_at);
+      if (Number.isNaN(date.getTime())) return point.captured_at;
+      return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+    })
+  ).size;
+}
+
 function emblemAssetPath(tier: string): string {
   return `/ranked-emblems/${tier.toLowerCase()}.png`;
 }
@@ -662,6 +672,56 @@ function QueueStatusPills({ queue }: { queue: RankedQueueSummary }) {
   );
 }
 
+function RankedCoverageStrip({
+  snapshotDays,
+  snapshots,
+  trackedGames,
+  liveSource,
+  recentGames,
+}: {
+  snapshotDays: number;
+  snapshots: number;
+  trackedGames: number;
+  liveSource: string;
+  recentGames: number;
+}) {
+  const coverageTone =
+    snapshotDays >= 7 ? "text-green-300" : snapshotDays >= 3 ? "text-cyan-300" : "text-amber-300";
+  const liveSourceLabel =
+    liveSource === "live" ? "Live Riot" : liveSource === "snapshot" ? "Stored snapshot" : "Unavailable";
+
+  return (
+    <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="min-w-0 rounded-lg border border-primary/10 bg-surface2/45 p-3">
+        <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Snapshot Days</div>
+        <div className={`mt-1 text-lg font-semibold ${coverageTone}`}>{snapshotDays}</div>
+        <div className="text-[11px] text-dim">{snapshots} total captures</div>
+      </div>
+      <div className="min-w-0 rounded-lg border border-primary/10 bg-surface2/45 p-3">
+        <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Tracked Ranked</div>
+        <div className="mt-1 text-lg font-semibold text-white">{trackedGames}</div>
+        <div className="text-[11px] text-dim">{recentGames} games in last 30d</div>
+      </div>
+      <div className="min-w-0 rounded-lg border border-primary/10 bg-surface2/45 p-3">
+        <div className="text-[11px] font-mono uppercase tracking-wide text-dim">LP Chart Mode</div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          {snapshotDays >= 3 ? "Trend" : snapshotDays >= 1 ? "Snapshot" : "Pending"}
+        </div>
+        <div className="text-[11px] text-dim">
+          {snapshotDays >= 3 ? "Enough history for a real curve" : "Collecting daily coverage"}
+        </div>
+      </div>
+      <div className="min-w-0 rounded-lg border border-primary/10 bg-surface2/45 p-3">
+        <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Live Queue Source</div>
+        <div className="mt-1 break-words text-base font-semibold text-white xl:text-lg">{liveSourceLabel}</div>
+        <div className="text-[11px] text-dim">
+          {liveSource === "live" ? "Fresh queue lookup from Riot" : "Falling back to tracked rank state"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TopRolesCard({
   favoriteRole,
   roles,
@@ -910,6 +970,8 @@ export default function RankedOverview({ puuid }: { puuid: string }) {
   const soloAccent = tierAccent(solo?.tier);
   const liveLookupUnavailable = liveRankStatus === "missing_region";
   const noLiveEntry = liveRankStatus === "no_entry";
+  const soloSnapshotDays = countSnapshotDays(soloHistory);
+  const trackedGames = recent?.games ?? 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -964,6 +1026,13 @@ export default function RankedOverview({ puuid }: { puuid: string }) {
 
           {recent || soloHistory.length > 0 ? (
             <>
+              <RankedCoverageStrip
+                snapshotDays={soloSnapshotDays}
+                snapshots={soloHistory.length}
+                trackedGames={trackedGames}
+                liveSource={soloSource}
+                recentGames={trackedGames}
+              />
               {recent ? (
                 <div className="grid gap-3 sm:grid-cols-4">
                   <div className="rounded-lg border border-primary/10 bg-surface2/45 p-3">
@@ -1009,7 +1078,7 @@ export default function RankedOverview({ puuid }: { puuid: string }) {
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wide text-dim">
                     <span>LP History</span>
-                    <span>{soloHistory.length} snapshots</span>
+                    <span>{soloHistory.length} snapshots • {soloSnapshotDays} days</span>
                   </div>
                   <LpHistoryChart history={soloHistory} color={soloAccent} />
                 </div>

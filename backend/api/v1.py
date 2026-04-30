@@ -1851,6 +1851,26 @@ async def get_match_detail(
     # Format participants and group by team
     blue_team = []
     red_team = []
+    objective_totals = {
+        100: {
+            "dragons": 0,
+            "barons": 0,
+            "heralds": 0,
+            "elders": 0,
+            "turrets": 0,
+            "plates": 0,
+            "first_turret": False,
+        },
+        200: {
+            "dragons": 0,
+            "barons": 0,
+            "heralds": 0,
+            "elders": 0,
+            "turrets": 0,
+            "plates": 0,
+            "first_turret": False,
+        },
+    }
 
     for p in all_participants:
         challenges = p.challenges or {}
@@ -1858,6 +1878,47 @@ async def get_match_detail(
         damage_share = float(challenges.get("damage_share", 0))
         team_k = team_kills.get(p.teamId, 1)
         kill_part = ((p.kills + p.assists) / max(team_k, 1)) * 100
+        objective_bucket = objective_totals.setdefault(
+            p.teamId,
+            {
+                "dragons": 0,
+                "barons": 0,
+                "heralds": 0,
+                "elders": 0,
+                "turrets": 0,
+                "plates": 0,
+                "first_turret": False,
+            },
+        )
+        objective_bucket["dragons"] = max(
+            int(objective_bucket["dragons"]),
+            int(challenges.get("teamDragonKills", challenges.get("dragonTakedowns", 0)) or 0),
+        )
+        objective_bucket["barons"] = max(
+            int(objective_bucket["barons"]),
+            int(challenges.get("teamBaronKills", challenges.get("baronTakedowns", 0)) or 0),
+        )
+        objective_bucket["heralds"] = max(
+            int(objective_bucket["heralds"]),
+            int(challenges.get("teamRiftHeraldKills", challenges.get("riftHeraldTakedowns", 0)) or 0),
+        )
+        objective_bucket["elders"] = max(
+            int(objective_bucket["elders"]),
+            int(challenges.get("teamElderDragonKills", 0) or 0),
+        )
+        objective_bucket["turrets"] = max(
+            int(objective_bucket["turrets"]),
+            int(challenges.get("turretTakedowns", 0) or 0),
+        )
+        objective_bucket["plates"] = max(
+            int(objective_bucket["plates"]),
+            int(challenges.get("turretPlatesTaken", 0) or 0),
+        )
+        objective_bucket["first_turret"] = bool(
+            objective_bucket["first_turret"]
+            or challenges.get("firstTurretKilled", 0)
+            or challenges.get("takedownOnFirstTurret", 0)
+        )
 
         participant_data = {
             "puuid": p.puuid,
@@ -1886,7 +1947,12 @@ async def get_match_detail(
         "match": {
             "duration": match.gameDuration,
             "patch": getattr(match, "patch", None),
+            "game_start_timestamp": match.gameStartTimestamp,
             "winning_team": next((p.teamId for p in all_participants if p.win), None),
+        },
+        "objectives": {
+            "blue": objective_totals.get(100, {}),
+            "red": objective_totals.get(200, {}),
         },
     }
 

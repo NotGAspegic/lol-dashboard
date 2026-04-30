@@ -3,16 +3,35 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { RotateCcw, Search, Shuffle, Swords, UserRound } from "lucide-react";
+import {
+  Bookmark,
+  Crosshair,
+  Flag,
+  Leaf,
+  RotateCcw,
+  Search,
+  Shield,
+  Shuffle,
+  Sparkles,
+  Swords,
+  Trash2,
+} from "lucide-react";
 
 import DraftProbabilityGauge from "@/components/ml/DraftProbabilityGauge";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
 import {
-  readCurrentSummoner,
+  CurrentSummonerIdentity,
   readCurrentSummonerSnapshot,
   subscribeToCurrentSummonerStore,
 } from "@/lib/currentSummoner";
+import {
+  readSavedDraftsSnapshot,
+  removeSavedDraft,
+  saveDraft,
+  SavedDraft,
+  subscribeToSavedDraftsStore,
+} from "@/lib/savedDrafts";
 import { getDraftPrediction } from "@/lib/api";
 import { formatSummonerDisplayName } from "@/lib/summonerRoute";
 
@@ -24,6 +43,25 @@ interface ChampionOption {
 }
 
 const TEAM_SIZE = 5;
+const SLOT_LABELS = ["Top", "Jungle", "Mid", "ADC", "Support"];
+const SLOT_ACCENTS = ["#4DB8FF", "#34C759", "#C86BFF", "#E8523C", "#45C5A1"];
+const SLOT_ICONS = [Flag, Leaf, Sparkles, Crosshair, Shield];
+
+function playerSlotLabel(index: number): string {
+  return SLOT_LABELS[index] ?? `Slot ${index + 1}`;
+}
+
+function slotAccent(index: number): string {
+  return SLOT_ACCENTS[index] ?? "#1E9BE8";
+}
+
+function describeSlot(slotKey: string | null): string | null {
+  if (!slotKey) return null;
+  const [team, rawIndex] = slotKey.split("-");
+  const slotIndex = Number(rawIndex);
+  if (!Number.isFinite(slotIndex)) return null;
+  return `${team === "blue" ? "Blue" : "Red"} ${playerSlotLabel(slotIndex)}`;
+}
 
 function ChampionAvatar({
   champion,
@@ -77,7 +115,6 @@ function TeamSlot({
   onActivate,
   onQueryChange,
   onSelect,
-  onMarkPlayer,
   takenChampionIds,
 }: {
   teamLabel: "Blue" | "Red";
@@ -91,7 +128,6 @@ function TeamSlot({
   onActivate: () => void;
   onQueryChange: (value: string) => void;
   onSelect: (championId: number) => void;
-  onMarkPlayer?: () => void;
   takenChampionIds: Set<number>;
 }) {
   const selectedChampion = champions.find((champion) => champion.id === selectedChampionId) ?? null;
@@ -101,20 +137,34 @@ function TeamSlot({
       ? champions.filter((champion) => champion.name.toLowerCase().includes(normalizedQuery))
       : champions;
 
-    return base
-      .filter((champion) => champion.id === selectedChampionId || !takenChampionIds.has(champion.id))
-      .slice(0, 8);
-  }, [champions, query, selectedChampionId, takenChampionIds]);
+    return base.slice(0, 10);
+  }, [champions, query]);
+  const SlotIcon = SLOT_ICONS[slotIndex] ?? Shield;
+  const accent = slotAccent(slotIndex);
 
   return (
     <div className="relative">
       <button
         type="button"
         onClick={onActivate}
-        className="flex w-full items-center gap-3 rounded-lg border px-3 py-3 pr-12 text-left transition-colors"
+        className={`flex w-full items-center gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${
+          active ? "ring-1 ring-primary/40" : ""
+        }`}
         style={{
-          borderColor: isPlayerSlot ? "rgba(30,155,232,0.45)" : "rgba(30,155,232,0.16)",
-          background: isPlayerSlot ? "rgba(30,155,232,0.08)" : "rgba(13,30,58,0.55)",
+          borderColor: active
+            ? "rgba(30,155,232,0.55)"
+            : isPlayerSlot
+            ? "rgba(30,155,232,0.45)"
+            : teamLabel === "Blue"
+              ? "rgba(77,184,255,0.18)"
+              : "rgba(232,82,60,0.18)",
+          background: active
+            ? "linear-gradient(135deg, rgba(20,43,79,0.88) 0%, rgba(13,30,58,0.72) 100%)"
+            : isPlayerSlot
+            ? "rgba(30,155,232,0.08)"
+            : teamLabel === "Blue"
+              ? "linear-gradient(135deg, rgba(17,34,60,0.82) 0%, rgba(13,30,58,0.55) 100%)"
+              : "linear-gradient(135deg, rgba(44,18,26,0.82) 0%, rgba(13,30,58,0.55) 100%)",
         }}
       >
         <ChampionAvatar champion={selectedChampion} patch={patch} size={40} />
@@ -122,6 +172,17 @@ function TeamSlot({
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono uppercase tracking-wider text-dim">
               {teamLabel} {slotIndex + 1}
+            </span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.16em]"
+              style={{
+                borderColor: `${accent}33`,
+                color: accent,
+                background: `${accent}12`,
+              }}
+            >
+              <SlotIcon className="h-3 w-3" />
+              {playerSlotLabel(slotIndex)}
             </span>
             {isPlayerSlot ? (
               <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider text-primary">
@@ -133,25 +194,7 @@ function TeamSlot({
             {selectedChampion?.name ?? "Select champion"}
           </div>
         </div>
-        {teamLabel === "Blue" && onMarkPlayer ? (
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md border border-primary/20 bg-surface/80 text-dim">
-              <UserRound size={14} />
-            </span>
-          </span>
-        ) : null}
       </button>
-
-      {teamLabel === "Blue" && onMarkPlayer ? (
-        <button
-          type="button"
-          onClick={onMarkPlayer}
-          className="absolute right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md border border-primary/20 bg-surface/80 text-dim transition-colors hover:text-primary"
-          aria-label={`Mark blue slot ${slotIndex + 1} as your champion`}
-        >
-          <UserRound size={14} />
-        </button>
-      ) : null}
 
       {active ? (
         <div
@@ -164,6 +207,9 @@ function TeamSlot({
             autoFocus
             className="w-full rounded-lg border border-primary/20 bg-surface2 px-3 py-2 text-sm text-white outline-none placeholder:text-dim focus:border-primary/45"
           />
+          <div className="mt-2 text-[11px] font-mono uppercase tracking-[0.18em] text-primary/70">
+            Assigning to {teamLabel} {playerSlotLabel(slotIndex)}
+          </div>
           <div className="mt-3 grid max-h-72 gap-1 overflow-y-auto">
             {filteredChampions.map((champion) => (
               <button
@@ -173,7 +219,12 @@ function TeamSlot({
                 className="flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface2"
               >
                 <ChampionAvatar champion={champion} patch={patch} size={36} />
-                <span className="truncate text-sm text-white">{champion.name}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm text-white">{champion.name}</div>
+                  {takenChampionIds.has(champion.id) && champion.id !== selectedChampionId ? (
+                    <div className="text-[11px] text-amber-300">Already picked • selecting will swap slots</div>
+                  ) : null}
+                </div>
               </button>
             ))}
             {filteredChampions.length === 0 ? (
@@ -194,7 +245,15 @@ export default function DraftPage() {
     readCurrentSummonerSnapshot,
     () => ""
   );
-  const storedSummoner = storedSummonerSnapshot ? readCurrentSummoner() : null;
+  const storedSummoner = useMemo<CurrentSummonerIdentity | null>(() => {
+    if (!storedSummonerSnapshot) return null;
+
+    try {
+      return JSON.parse(storedSummonerSnapshot) as CurrentSummonerIdentity;
+    } catch {
+      return null;
+    }
+  }, [storedSummonerSnapshot]);
   const initialPuuid = queryPuuid || storedSummoner?.puuid || "";
   const summonerLabel = storedSummoner
     ? formatSummonerDisplayName({
@@ -203,6 +262,18 @@ export default function DraftPage() {
         tagLine: storedSummoner.tagLine,
       })
     : (queryPuuid ? queryPuuid.slice(0, 8).toUpperCase() : "");
+  const savedDraftSnapshot = useSyncExternalStore(
+    subscribeToSavedDraftsStore,
+    readSavedDraftsSnapshot,
+    () => "[]"
+  );
+  const savedDrafts = useMemo<SavedDraft[]>(() => {
+    try {
+      return JSON.parse(savedDraftSnapshot) as SavedDraft[];
+    } catch {
+      return [];
+    }
+  }, [savedDraftSnapshot]);
   const [patch, setPatch] = useState("16.8.1");
   const [champions, setChampions] = useState<ChampionOption[]>([]);
   const [loadingChampions, setLoadingChampions] = useState(true);
@@ -263,6 +334,26 @@ export default function DraftPage() {
   );
   const hasAllPicks = filledCount === TEAM_SIZE * 2;
   const playerChampionId = blueTeam[playerSlot];
+  const championById = useMemo(
+    () => new Map(champions.map((champion) => [champion.id, champion])),
+    [champions]
+  );
+  const recentChampionIds = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const draft of savedDrafts) {
+      for (const championId of [...draft.blueTeam, ...draft.redTeam]) {
+        if (championId != null) {
+          counts.set(championId, (counts.get(championId) ?? 0) + 1);
+        }
+      }
+    }
+
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 6)
+      .map(([championId]) => championId);
+  }, [savedDrafts]);
+  const activeSlotLabel = describeSlot(activeSlot);
 
   const draftQuery = useQuery({
     queryKey: ["draft-prediction", initialPuuid, blueTeam, redTeam, playerSlot],
@@ -279,8 +370,40 @@ export default function DraftPage() {
   });
 
   function setChampion(team: "blue" | "red", index: number, championId: number) {
-    const setter = team === "blue" ? setBlueTeam : setRedTeam;
-    setter((previous) => previous.map((value, slotIndex) => (slotIndex === index ? championId : value)));
+    const sourceKey = `${team}-${index}`;
+    let swapTarget: { team: "blue" | "red"; index: number } | null = null;
+
+    blueTeam.forEach((value, slotIndex) => {
+      if (value === championId && sourceKey !== `blue-${slotIndex}`) {
+        swapTarget = { team: "blue", index: slotIndex };
+      }
+    });
+    redTeam.forEach((value, slotIndex) => {
+      if (value === championId && sourceKey !== `red-${slotIndex}`) {
+        swapTarget = { team: "red", index: slotIndex };
+      }
+    });
+
+    const currentValue = team === "blue" ? blueTeam[index] : redTeam[index];
+
+    if (team === "blue") {
+      setBlueTeam((previous) => previous.map((value, slotIndex) => (slotIndex === index ? championId : value)));
+    } else {
+      setRedTeam((previous) => previous.map((value, slotIndex) => (slotIndex === index ? championId : value)));
+    }
+
+    if (swapTarget) {
+      if (swapTarget.team === "blue") {
+        setBlueTeam((previous) =>
+          previous.map((value, slotIndex) => (slotIndex === swapTarget?.index ? currentValue ?? null : value))
+        );
+      } else {
+        setRedTeam((previous) =>
+          previous.map((value, slotIndex) => (slotIndex === swapTarget?.index ? currentValue ?? null : value))
+        );
+      }
+    }
+
     setActiveSlot(null);
     setSlotQueries((previous) => ({ ...previous, [`${team}-${index}`]: "" }));
   }
@@ -305,7 +428,37 @@ export default function DraftPage() {
 
     setBlueTeam(randomized.slice(0, TEAM_SIZE));
     setRedTeam(randomized.slice(TEAM_SIZE, TEAM_SIZE * 2));
-    setPlayerSlot(Math.floor(Math.random() * TEAM_SIZE));
+    setActiveSlot(null);
+    setSlotQueries({});
+  }
+
+  function saveCurrentDraft() {
+    const filledBlue = blueTeam.filter((value) => value != null).length;
+    const filledRed = redTeam.filter((value) => value != null).length;
+    const totalFilled = filledBlue + filledRed;
+    if (totalFilled < 2) return;
+
+    const stamp = new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+
+    saveDraft({
+      label: `${summonerLabel || "Draft"} · ${stamp}`,
+      blueTeam,
+      redTeam,
+      playerSlot,
+      puuid: initialPuuid || undefined,
+      summonerLabel: summonerLabel || undefined,
+    });
+  }
+
+  function loadSavedDraft(draft: SavedDraft) {
+    setBlueTeam(draft.blueTeam);
+    setRedTeam(draft.redTeam);
+    setPlayerSlot(draft.playerSlot);
     setActiveSlot(null);
     setSlotQueries({});
   }
@@ -323,7 +476,7 @@ export default function DraftPage() {
           </div>
           {team === "blue" && playerChampionId != null ? (
             <div className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-mono uppercase tracking-wider text-primary">
-              Your Champion: {champions.find((champion) => champion.id === playerChampionId)?.name ?? "Blue Slot"}
+              Your {playerSlotLabel(playerSlot)}: {champions.find((champion) => champion.id === playerChampionId)?.name ?? "Open slot"}
             </div>
           ) : null}
         </div>
@@ -349,7 +502,6 @@ export default function DraftPage() {
                 }))
               }
               onSelect={(selectedId) => setChampion(team, index, selectedId)}
-              onMarkPlayer={team === "blue" ? () => setPlayerSlot(index) : undefined}
               takenChampionIds={allSelectedIds}
             />
           );
@@ -362,8 +514,56 @@ export default function DraftPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <div className="text-xs font-mono uppercase tracking-wider text-dim">Draft Analyzer</div>
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex-1">
+        <div className="rounded-xl border border-primary/15 bg-surface2/35 px-4 py-3 text-sm text-dim">
+          Build both drafts, choose your blue-side role, then save comps you want to revisit.
+          The prediction becomes more useful when you open this tool from a tracked summoner profile.
+        </div>
+        {recentChampionIds.length > 0 ? (
+          <div className="rounded-xl border border-primary/10 bg-surface2/30 px-4 py-3">
+            <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-dim">Recently Used Champions</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {recentChampionIds.map((championId) => {
+                const champion = championById.get(championId) ?? null;
+                if (!champion) return null;
+
+                return (
+                  <button
+                    key={`recent-${championId}`}
+                    type="button"
+                    onClick={() => {
+                      if (activeSlot) {
+                        const [team, slotIndex] = activeSlot.split("-");
+                        setChampion(team as "blue" | "red", Number(slotIndex), championId);
+                      }
+                    }}
+                    className="flex items-center gap-2 rounded-full border border-primary/15 bg-surface px-2.5 py-1.5 text-xs text-white transition-colors hover:border-primary/35 hover:bg-surface2"
+                    disabled={!activeSlot}
+                    title={activeSlot ? `Assign ${champion.name} to selected slot` : "Select a slot first"}
+                  >
+                    <ChampionAvatar champion={champion} patch={patch} size={24} />
+                    <span>{champion.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 text-xs text-dim">
+              {activeSlot
+                ? "Click a champion to drop it into the currently opened slot."
+                : "Open any slot picker first, then these become one-click shortcuts."}
+            </div>
+          </div>
+        ) : null}
+        {activeSlotLabel ? (
+          <div className="rounded-xl border border-primary/15 bg-primary/8 px-4 py-3">
+            <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-primary/70">Active Slot</div>
+            <div className="mt-1 text-sm font-semibold text-white">{activeSlotLabel}</div>
+            <div className="mt-1 text-xs text-dim">
+              Search a champion or click a recent pick. Choosing an already-picked champion swaps the two slots.
+            </div>
+          </div>
+        ) : null}
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+          <div className="min-w-0 rounded-xl border border-primary/12 bg-surface2/20 p-3">
             <label className="mb-2 block text-xs font-mono uppercase tracking-wider text-dim">
               Tracked Summoner
             </label>
@@ -374,15 +574,50 @@ export default function DraftPage() {
               readOnly
             />
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="rounded-lg border border-primary/15 bg-surface px-4 py-3 text-sm text-dim">
-              {hasAllPicks ? "Draft locked in" : `${filledCount}/10 picks filled`}
+
+          <div className="min-w-0 rounded-xl border border-primary/12 bg-surface2/20 p-3">
+            <div className="mb-2 block text-xs font-mono uppercase tracking-wider text-dim">
+              Your Role
             </div>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+              {SLOT_LABELS.map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setPlayerSlot(index)}
+                  className={`min-h-[48px] rounded-lg border px-2 py-3 text-[11px] font-mono uppercase tracking-[0.16em] transition-colors ${
+                    playerSlot === index
+                      ? "border-primary/35 bg-primary/12 text-primary"
+                      : "border-primary/15 bg-surface text-dim hover:border-primary/30 hover:text-white"
+                  }`}
+                  aria-pressed={playerSlot === index}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="min-w-0 rounded-xl border border-primary/12 bg-surface2/20 p-3">
+            <div className="rounded-lg border border-primary/15 bg-surface px-4 py-3 text-sm text-dim">
+              {hasAllPicks
+                ? `Draft locked in • ${playerSlotLabel(playerSlot)}`
+                : `${filledCount}/10 picks filled • ${playerSlotLabel(playerSlot)}`}
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+              <button
+                type="button"
+                onClick={saveCurrentDraft}
+                disabled={filledCount < 2}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-surface px-4 text-sm text-white transition-colors hover:border-primary/40 hover:bg-surface2 disabled:opacity-40"
+              >
+                <Bookmark size={16} />
+                Save Comp
+              </button>
               <button
                 type="button"
                 onClick={resetDraft}
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-primary/20 bg-surface px-4 text-sm text-white transition-colors hover:border-primary/40 hover:bg-surface2"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-surface px-4 text-sm text-white transition-colors hover:border-primary/40 hover:bg-surface2"
               >
                 <RotateCcw size={16} />
                 Reset
@@ -390,7 +625,7 @@ export default function DraftPage() {
               <button
                 type="button"
                 onClick={randomizeDraft}
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-primary/20 bg-surface px-4 text-sm text-white transition-colors hover:border-primary/40 hover:bg-surface2"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-surface px-4 text-sm text-white transition-colors hover:border-primary/40 hover:bg-surface2"
               >
                 <Shuffle size={16} />
                 Random Draft
@@ -399,6 +634,73 @@ export default function DraftPage() {
           </div>
         </div>
       </div>
+
+      {savedDrafts.length > 0 ? (
+        <Card className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-mono uppercase tracking-[0.22em] text-dim">Saved Comps</div>
+              <div className="mt-1 text-sm font-semibold text-white">Reuse previous draft setups</div>
+            </div>
+            <div className="text-xs text-dim">{savedDrafts.length} stored</div>
+          </div>
+          <div className="grid gap-2 lg:grid-cols-2">
+            {savedDrafts.map((draft) => (
+              <div
+                key={draft.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-surface2/50 px-3 py-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => loadSavedDraft(draft)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <div className="truncate text-sm font-semibold text-white">{draft.label}</div>
+                  <div className="truncate text-[11px] font-mono uppercase tracking-wide text-dim">
+                    {draft.summonerLabel ?? "Saved draft"} • role {playerSlotLabel(draft.playerSlot)}
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-lg border border-blue-400/10 bg-blue-500/5 px-2 py-2">
+                      <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-blue-200/70">Blue</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {draft.blueTeam.map((championId, index) => (
+                          <ChampionAvatar
+                            key={`saved-blue-${draft.id}-${index}`}
+                            champion={championId != null ? championById.get(championId) ?? null : null}
+                            patch={patch}
+                            size={26}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-red-400/10 bg-red-500/5 px-2 py-2">
+                      <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-red-200/70">Red</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {draft.redTeam.map((championId, index) => (
+                          <ChampionAvatar
+                            key={`saved-red-${draft.id}-${index}`}
+                            champion={championId != null ? championById.get(championId) ?? null : null}
+                            patch={patch}
+                            size={26}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeSavedDraft(draft.id)}
+                  className="rounded-lg border border-primary/15 p-2 text-dim transition-colors hover:text-red-300"
+                  aria-label="Delete saved draft"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {loadingChampions ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px_1fr]">
@@ -432,6 +734,29 @@ export default function DraftPage() {
               ) : (
                 <div className="flex w-full flex-col items-center gap-3">
                   <DraftProbabilityGauge prediction={draftQuery.data} />
+                  <div className="rounded-lg border border-primary/10 bg-surface2/45 px-3 py-2 text-center text-xs text-dim">
+                    {draftQuery.data.note}
+                  </div>
+                  <div className="grid w-full gap-2 text-left sm:grid-cols-2">
+                    <div className="rounded-lg border border-primary/10 bg-surface2/35 px-3 py-3">
+                      <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Confidence</div>
+                      <div className="mt-1 text-sm font-semibold text-white capitalize">
+                        {draftQuery.data.confidence.replaceAll("_", " ")}
+                      </div>
+                      <div className="mt-1 text-xs text-dim">
+                        Higher confidence usually means this player-champion pairing has enough tracked examples.
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-primary/10 bg-surface2/35 px-3 py-3">
+                      <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Sample</div>
+                      <div className="mt-1 text-sm font-semibold text-white">
+                        {draftQuery.data.player_champion_games} games
+                      </div>
+                      <div className="mt-1 text-xs text-dim">
+                        Player win rate on this champion: {draftQuery.data.player_champion_winrate.toFixed(1)}%.
+                      </div>
+                    </div>
+                  </div>
                   {draftQuery.isFetching ? (
                     <div className="text-[11px] font-mono uppercase tracking-wider text-dim">
                       Updating prediction...
@@ -446,7 +771,7 @@ export default function DraftPage() {
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm font-semibold text-white">Fill all 10 picks to see win probability</div>
-                  <div className="text-xs text-dim">Choose the player’s blue-side slot, then complete both drafts.</div>
+                  <div className="text-xs text-dim">Choose your blue-side role, complete both drafts, then save the comp if you want to compare variations.</div>
                 </div>
               </div>
             )}

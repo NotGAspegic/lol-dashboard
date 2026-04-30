@@ -179,8 +179,25 @@ export async function getSummonerSuggestions(
   return res.data;
 }
 
-export async function getTaskStatus(taskId: string) {
-  const res = await api.get(`/tasks/${taskId}/status`);
+export interface TaskStatus {
+  status: "PENDING" | "STARTED" | "SUCCESS" | "FAILURE";
+  message?: string;
+  result: unknown | null;
+}
+
+export async function getTaskStatus(taskId: string): Promise<TaskStatus> {
+  const res = await api.get<TaskStatus>(`/tasks/${taskId}/status`);
+  return res.data;
+}
+
+export interface RefreshAcceptedResponse {
+  status: "accepted";
+  task_id: string;
+  puuid: string;
+}
+
+export async function refreshSummoner(puuid: string): Promise<RefreshAcceptedResponse> {
+  const res = await api.post<RefreshAcceptedResponse>(`/summoners/${puuid}/refresh`);
   return res.data;
 }
 
@@ -288,6 +305,13 @@ export interface RankedSummary {
   note: string;
 }
 
+export interface IngestionStatus {
+  puuid: string;
+  total_matches: number;
+  last_ingested: string | null;
+  pending_tasks: number;
+}
+
 export interface DraftPredictionRequest {
   puuid: string;
   ally_champion_ids: number[];
@@ -326,6 +350,11 @@ export async function getStatsOverview(puuid: string): Promise<StatsOverview> {
 
 export async function getRankedSummary(puuid: string): Promise<RankedSummary> {
   const res = await api.get<RankedSummary>(`/summoners/${puuid}/ranked-summary`);
+  return res.data;
+}
+
+export async function getIngestionStatus(puuid: string): Promise<IngestionStatus> {
+  const res = await api.get<IngestionStatus>(`/summoners/${puuid}/ingestion-status`);
   return res.data;
 }
 
@@ -384,13 +413,28 @@ export interface MatchParticipant {
   kill_participation: number;
 }
 
+export interface MatchObjectiveSummary {
+  dragons: number;
+  barons: number;
+  heralds: number;
+  elders: number;
+  turrets: number;
+  plates: number;
+  first_turret: boolean;
+}
+
 export interface MatchDetail {
   blue_team: MatchParticipant[];
   red_team: MatchParticipant[];
   match: {
     duration: number;
     patch: string | null;
+    game_start_timestamp: number;
     winning_team: number | null;
+  };
+  objectives: {
+    blue: MatchObjectiveSummary;
+    red: MatchObjectiveSummary;
   };
 }
 
