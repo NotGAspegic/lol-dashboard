@@ -53,24 +53,22 @@ def _invalidate_profile_cache_sync(puuid: str) -> None:
             f"vision_impact:{puuid}",
             f"matchups:{puuid}",
             f"playstyle:{puuid}",
+            f"perf_scatter:{puuid}",
         ]
         r.delete(*keys_to_delete)
 
-        cursor = 0
-        while True:
-            cursor, keys = r.scan(cursor, match=f"matches:{puuid}:*", count=100)
-            if keys:
-                r.delete(*keys)
-            if cursor == 0:
-                break
-
-        cursor = 0
-        while True:
-            cursor, keys = r.scan(cursor, match=f"gold_curves:{puuid}:*", count=100)
-            if keys:
-                r.delete(*keys)
-            if cursor == 0:
-                break
+        for pattern in [
+            f"matches:{puuid}:*",
+            f"gold_curves:{puuid}:*",
+            f"kda_trend:{puuid}:*",
+        ]:
+            cursor = 0
+            while True:
+                cursor, keys = r.scan(cursor, match=pattern, count=100)
+                if keys:
+                    r.delete(*keys)
+                if cursor == 0:
+                    break
 
         r.close()
         logger.debug("Cache invalidated for puuid=%s", puuid)
@@ -108,6 +106,7 @@ def refresh_summoner(
     region: str,
     count: int = 20,
     queue: int = 420,
+    dispatch_queue: str = "ingestion",
 ) -> dict[str, Any]:
     """Refresh profile data and trigger incremental match fanout from stored cursor."""
     normalized_puuid = puuid.strip()
@@ -119,6 +118,9 @@ def refresh_summoner(
         raise ValueError("count must be between 1 and 100.")
     if queue < 0:
         raise ValueError("queue must be >= 0.")
+    normalized_dispatch_queue = dispatch_queue.strip()
+    if not normalized_dispatch_queue:
+        raise ValueError("dispatch_queue cannot be empty.")
 
     with SyncSessionFactory() as session:
         stored_cursor = session.scalar(
@@ -209,8 +211,9 @@ def refresh_summoner(
             "count": count,
             "queue": queue,
             "since_match_id": stored_cursor,
+            "dispatch_queue": normalized_dispatch_queue,
         },
-        queue="ingestion",
+        queue=normalized_dispatch_queue,
     )
 
     logger.info(
@@ -231,6 +234,7 @@ def refresh_summoner(
         "platform_region": platform_region,
         "since_match_id": stored_cursor,
         "fanout_task_id": fanout_async.id,
+        "dispatch_queue": normalized_dispatch_queue,
         "dispatched": True,
         "profile": {
             "id": summoner_dto.id,

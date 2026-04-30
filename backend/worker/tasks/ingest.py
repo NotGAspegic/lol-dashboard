@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 from celery import shared_task
+import redis as redis_sync
 from redis.asyncio import Redis
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -32,6 +33,41 @@ logger = logging.getLogger(__name__)
 MAX_RETRIES = 3
 RATE_LIMIT_RETRY_DELAY_SECONDS = 30
 SERVER_ERROR_RETRY_DELAY_SECONDS = 60
+
+
+def _invalidate_profile_cache_sync(puuid: str) -> None:
+    try:
+        r = redis_sync.from_url(settings.redis_url, decode_responses=True)
+        keys_to_delete = [
+            f"summoner:{puuid}",
+            f"ranked_summary:{puuid}",
+            f"champion_stats:{puuid}",
+            f"stats_overview:{puuid}",
+            f"tilt_prediction:{puuid}",
+            f"damage_efficiency:{puuid}",
+            f"vision_impact:{puuid}",
+            f"matchups:{puuid}",
+            f"playstyle:{puuid}",
+            f"perf_scatter:{puuid}",
+        ]
+        r.delete(*keys_to_delete)
+
+        for pattern in [
+            f"matches:{puuid}:*",
+            f"gold_curves:{puuid}:*",
+            f"kda_trend:{puuid}:*",
+        ]:
+            cursor = 0
+            while True:
+                cursor, keys = r.scan(cursor, match=pattern, count=100)
+                if keys:
+                    r.delete(*keys)
+                if cursor == 0:
+                    break
+
+        r.close()
+    except Exception:
+        logger.warning("Cache invalidation failed after ingest for puuid=%s", puuid, exc_info=True)
 
 
 def _extract_game_id(match_id: str) -> int:
@@ -253,6 +289,11 @@ def ingest_match(
 
             # Step 6: commit.
             session.commit()
+
+        for participant in match_dto.participants:
+            participant_puuid = participant.puuid.strip()
+            if participant_puuid:
+                _invalidate_profile_cache_sync(participant_puuid)
     except RiotRateLimitedError as exc:
         countdown = 2 ** self.request.retries * 30
         logger.warning(
@@ -351,6 +392,7 @@ def ingest_summoner_matches(
     queue: int = 420,
     since_match_id: str | None = None,
     include_existing: bool = False,
+    dispatch_queue: str = "ingestion",
 ) -> dict[str, Any]:
     """Orchestrate match ingestion by dispatching one task per new match ID.
 
@@ -371,12 +413,17 @@ def ingest_summoner_matches(
         raise ValueError("count must be between 1 and 100.")
     if queue < 0:
         raise ValueError("queue must be >= 0.")
+    normalized_dispatch_queue = dispatch_queue.strip()
+    if not normalized_dispatch_queue:
+        raise ValueError("dispatch_queue cannot be empty.")
 
     normalized_since_match_id: str | None = None
+    cursor_game_id: int | None = None
     if since_match_id is not None:
         normalized_since_match_id = since_match_id.strip()
         if not normalized_since_match_id:
             raise ValueError("since_match_id cannot be empty when provided.")
+        cursor_game_id = _extract_game_id(normalized_since_match_id)
 
     async def _fetch_match_ids() -> list[str]:
         async with RiotClient(
@@ -497,6 +544,44 @@ def ingest_summoner_matches(
                 ).all()
             )
 
+    if normalized_since_match_id is not None and cursor_game_id is not None and cursor_game_id not in existing_game_ids:
+        cursor_found = False
+        candidate_match_ids = fetched_match_ids
+        ordered_game_ids = []
+        game_id_to_match_id = {}
+
+        for candidate_match_id in candidate_match_ids:
+            try:
+                candidate_game_id = _extract_game_id(candidate_match_id)
+            except ValueError:
+                logger.warning(
+                    "Skipping malformed match ID while rebuilding candidate list "
+                    "(puuid=%s, region=%s, match_id=%s)",
+                    normalized_puuid,
+                    normalized_region,
+                    candidate_match_id,
+                )
+                continue
+
+            if candidate_game_id not in game_id_to_match_id:
+                ordered_game_ids.append(candidate_game_id)
+                game_id_to_match_id[candidate_game_id] = candidate_match_id
+
+        with SyncSessionFactory() as session:
+            existing_game_ids = set(
+                session.scalars(
+                    select(Match.gameId).where(Match.gameId.in_(ordered_game_ids))
+                ).all()
+            )
+
+        logger.warning(
+            "Stored cursor missing from DB; treating refresh window as uncached "
+            "(puuid=%s, region=%s, since_match_id=%s)",
+            normalized_puuid,
+            normalized_region,
+            normalized_since_match_id,
+        )
+
     if include_existing:
         target_match_ids = [game_id_to_match_id[game_id] for game_id in ordered_game_ids]
     else:
@@ -513,7 +598,7 @@ def ingest_summoner_matches(
             args=[target_match_id, normalized_region],
             kwargs={"refresh_existing": include_existing},
             countdown=countdown,
-            queue="ingestion",
+            queue=normalized_dispatch_queue,
         )
         dispatched_tasks.append(
             {
@@ -574,6 +659,7 @@ def ingest_summoner_matches(
         "requested_count": count,
         "queue": queue,
         "include_existing": include_existing,
+        "dispatch_queue": normalized_dispatch_queue,
         "since_match_id": normalized_since_match_id,
         "cursor_found": cursor_found,
         "fetched_match_count": len(fetched_match_ids),

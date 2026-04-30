@@ -75,6 +75,18 @@ function formatShortDate(value: string): string {
   }).format(date);
 }
 
+function formatShortDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function formatDaysAgo(value: string, latestValue: string): string {
   const current = new Date(value).getTime();
   const latest = new Date(latestValue).getTime();
@@ -133,6 +145,18 @@ function historyScore(point: RankHistoryPoint): number {
   const divisionValue = apexTier ? 0 : rankDivisionValue(point.rank);
   const lpWeight = apexTier ? 1 / 1000 : 1 / 100;
   return tierBaseValue(point.tier) + divisionValue + point.league_points * lpWeight;
+}
+
+function isSameCalendarDay(left: string, right: string): boolean {
+  const leftDate = new Date(left);
+  const rightDate = new Date(right);
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) return false;
+
+  return (
+    leftDate.getUTCFullYear() === rightDate.getUTCFullYear() &&
+    leftDate.getUTCMonth() === rightDate.getUTCMonth() &&
+    leftDate.getUTCDate() === rightDate.getUTCDate()
+  );
 }
 
 function emblemAssetPath(tier: string): string {
@@ -399,6 +423,90 @@ function LpHistoryChart({
   const values = scoredHistory.map((point) => point.score);
   const min = Math.min(...values);
   const max = Math.max(...values);
+  const uniqueSnapshotDays = new Set(
+    history.map((point) => {
+      const date = new Date(point.captured_at);
+      if (Number.isNaN(date.getTime())) return point.captured_at;
+      return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+    })
+  ).size;
+  const latestPoint = scoredHistory.at(-1) ?? scoredHistory[0];
+  const peakPoint = scoredHistory.reduce((best, point) => (point.score > best.score ? point : best), scoredHistory[0]);
+  const sparseHistory =
+    scoredHistory.length < 3 ||
+    uniqueSnapshotDays < 3 ||
+    Math.abs(max - min) < 0.02;
+
+  if (sparseHistory) {
+    const earliestPoint = scoredHistory[0];
+    const delta = latestPoint.league_points - earliestPoint.league_points;
+    const sameDayWindow = isSameCalendarDay(earliestPoint.captured_at, latestPoint.captured_at);
+
+    return (
+      <div className="rounded-lg border border-primary/10 bg-[rgba(9,18,34,0.78)] p-3">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold text-white">Last 30d</span>
+            <span className={`text-xs font-mono ${delta >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {delta >= 0 ? "+" : ""}
+              {delta} LP
+            </span>
+          </div>
+          <span className="text-xs font-mono uppercase tracking-wide text-dim">
+            Peak: {formatRankLabel(peakPoint)} {peakPoint.league_points} LP
+          </span>
+        </div>
+
+        <div className="rounded-lg border border-primary/10 bg-[rgba(13,30,58,0.26)] p-4">
+          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wide text-dim">
+            <span>{sameDayWindow ? "Earlier snapshot" : formatShortDate(earliestPoint.captured_at)}</span>
+            <span>{formatShortDate(latestPoint.captured_at)}</span>
+          </div>
+
+          <div className="relative mt-6 h-16">
+            <div className="absolute left-6 right-6 top-1/2 h-px -translate-y-1/2 border-t border-dashed border-primary/20" />
+            <div className="absolute left-6 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+              <span className="h-4 w-4 rounded-full border-2 border-white bg-amber-400 shadow-[0_0_18px_rgba(245,158,11,0.35)]" />
+            </div>
+            <div className="absolute right-6 top-1/2 flex translate-x-1/2 -translate-y-1/2 items-center justify-center">
+              <span
+                className="h-4 w-4 rounded-full border-2 border-white shadow-[0_0_18px_rgba(110,231,255,0.3)]"
+                style={{ backgroundColor: color }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-xs font-mono uppercase tracking-wide text-dim">
+                {sameDayWindow ? formatShortDateTime(earliestPoint.captured_at) : formatRankLabel(earliestPoint)}
+              </div>
+              <div className="mt-1 text-lg font-semibold text-white">
+                {formatRankLabel(earliestPoint)}
+              </div>
+              <div className="text-sm text-dim">{earliestPoint.league_points} LP</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs font-mono uppercase tracking-wide text-dim">
+                {formatShortDateTime(latestPoint.captured_at)}
+              </div>
+              <div className="mt-1 text-lg font-semibold text-white">
+                {formatRankLabel(latestPoint)}
+              </div>
+              <div className="text-sm font-semibold" style={{ color }}>
+                {latestPoint.league_points} LP
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 text-[11px] font-mono uppercase tracking-wide text-dim">
+            Collecting daily LP snapshots. The full 30d rank chart appears after more snapshot days are stored.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const range = Math.max(max - min, 1.25);
   const width = 520;
   const height = 184;
@@ -408,9 +516,6 @@ function LpHistoryChart({
   const graphWidth = width - paddingX * 2;
   const graphHeight = height - paddingTop - paddingBottom;
   const step = scoredHistory.length === 1 ? 0 : graphWidth / (scoredHistory.length - 1);
-  const peakPoint = scoredHistory.reduce((best, point) => (point.score > best.score ? point : best), scoredHistory[0]);
-  const latestPoint = scoredHistory.at(-1) ?? scoredHistory[0];
-
   const points = scoredHistory
     .map((point, index) => {
       const x = paddingX + index * step;

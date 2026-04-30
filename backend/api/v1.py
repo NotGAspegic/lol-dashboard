@@ -469,7 +469,11 @@ async def refresh_summoner_endpoint(
             )
         await redis_client.setex(rate_key, REFRESH_RATE_LIMIT_SECONDS, "1")
 
-    async_result = refresh_summoner.delay(puuid, summoner.region)
+    async_result = refresh_summoner.delay(
+        puuid,
+        summoner.region,
+        dispatch_queue="priority_ingestion",
+    )
 
     logger.info(
         "Manual refresh triggered (puuid=%s, region=%s, task_id=%s)",

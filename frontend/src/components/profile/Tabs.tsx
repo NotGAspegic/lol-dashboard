@@ -116,13 +116,6 @@ export default function Tabs({ puuid }: { puuid: string }) {
             </p>
             <VisionImpactChart puuid={puuid} />
           </div>
-
-          <div className="flex flex-col gap-3">
-            <p className="text-dim text-xs font-mono uppercase tracking-wider">
-              // Damage vs Gold Efficiency
-            </p>
-            <DamageGoldChart puuid={puuid} />
-          </div>
         </div>
       )}
     </div>
