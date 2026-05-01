@@ -36,6 +36,14 @@ class Settings(BaseSettings):
 	api_v1_prefix: str = "/api/v1"
 	frontend_origin: str = "http://localhost:3000"
 
+	@field_validator("frontend_origin", mode="before")
+	@classmethod
+	def normalize_frontend_origin(cls, value: object) -> object:
+		if isinstance(value, str):
+			origins = [origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()]
+			return ",".join(origins)
+		return value
+
 	@field_validator("database_url")
 	@classmethod
 	def validate_database_url(cls, value: str) -> str:
@@ -58,6 +66,10 @@ class Settings(BaseSettings):
 	def sync_database_url(self) -> str:
 		"""Sync DB URL for tools/drivers that do not support asyncpg dialect."""
 		return self.database_url.replace("+asyncpg", "")
+
+	@property
+	def frontend_origins(self) -> list[str]:
+		return [origin for origin in self.frontend_origin.split(",") if origin]
 
 	@property
 	def effective_celery_broker_url(self) -> str:
