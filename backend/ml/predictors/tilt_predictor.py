@@ -8,6 +8,8 @@ import shap
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from metrics import record_ml_prediction
+
 try:
     from ..features.shap_reasons import top_reasons
     from ..features.tilt_features import compute_tilt_features
@@ -122,6 +124,7 @@ async def predict_tilt(puuid: str, session: AsyncSession) -> dict[str, Any]:
         positive_class_shap = shap_values
 
     reasons = top_reasons(positive_class_shap, feature_names, feature_values, n=3)
+    record_ml_prediction("tilt_v1")
 
     return {
         "tilt_score": tilt_score,

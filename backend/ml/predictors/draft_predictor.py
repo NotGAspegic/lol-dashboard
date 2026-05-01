@@ -6,6 +6,8 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from metrics import record_ml_prediction
+
 try:
     from ...models.db import Match, MatchParticipant
     from ..features.draft_features import compute_draft_features, compute_player_champion_history
@@ -155,6 +157,7 @@ async def predict_draft_win(
     win_probability = float(model.predict_proba(feature_frame)[0][1])
     player_champion_games = int(player_history["player_games_on_champ"])
     player_champion_winrate = round(float(player_history["player_winrate_on_champ"]) * 100, 1)
+    record_ml_prediction("draft_v1")
 
     return {
         "win_probability": round(win_probability, 4),

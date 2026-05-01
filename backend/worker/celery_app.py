@@ -1,6 +1,8 @@
 from celery import Celery
+from celery.signals import task_postrun, task_prerun
 
 from config import settings
+from metrics import record_celery_task
 
 from celery.schedules import crontab
 
@@ -53,3 +55,17 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "refresh"},
     },
 }
+
+
+def _metric_task_name(task: object | None) -> str:
+    return getattr(task, "name", None) or "unknown"
+
+
+@task_prerun.connect
+def _record_task_started(task=None, **kwargs) -> None:
+    record_celery_task(_metric_task_name(task), "started")
+
+
+@task_postrun.connect
+def _record_task_finished(task=None, state=None, **kwargs) -> None:
+    record_celery_task(_metric_task_name(task), state or "unknown")

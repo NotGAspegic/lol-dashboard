@@ -12,6 +12,7 @@ celery[redis]
 python-dotenv
 requests
 flower
+prometheus-fastapi-instrumentator
 scikit-learn
 xgboost
 shap

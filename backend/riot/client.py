@@ -10,6 +10,7 @@ from urllib.parse import quote
 import httpx
 from redis.asyncio import Redis
 
+from metrics import record_riot_api_request
 from models import SummonerDTO
 from models.riot_dtos import AccountDTO, LeagueEntryDTO
 from riot.rate_limiter import RiotDualBucketRateLimiter
@@ -199,6 +200,7 @@ class RiotClient:
         while True:
             await self._acquire_rate_limit_slot(region)
             response = await self.client.get(url, params=params)
+            record_riot_api_request(response.status_code)
 
             if response.status_code != 429:
                 await self._maybe_sleep_near_server_limit(response)
