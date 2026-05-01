@@ -1,7 +1,13 @@
 import axios from "axios";
 
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+const normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
+const apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
+  ? normalizedApiUrl
+  : `${normalizedApiUrl}/api/v1`;
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1",
+  baseURL: apiBaseUrl,
   headers: { "Content-Type": "application/json" },
 });
 
