@@ -1,0 +1,10 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+ignore = ["E501"]
+exclude = [
+  "backend/.venv",
+  "backend/venv",
+  "backend/__pycache__",
+]

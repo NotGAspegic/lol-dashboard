@@ -1710,7 +1710,6 @@ async def get_playstyle(
     # Calculate basic averages
     avg_kills = sum(g.kills for g in games) / len(games)
     avg_assists = sum(g.assists for g in games) / len(games)
-    avg_deaths = sum(g.deaths for g in games) / len(games) or 1.0
     avg_vision = sum(g.visionScore or 0 for g in games) / len(games)
 
     # Extract cs_per_min from challenges JSONB
