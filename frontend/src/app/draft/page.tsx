@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -237,7 +237,7 @@ function TeamSlot({
   );
 }
 
-export default function DraftPage() {
+function DraftPageContent() {
   const searchParams = useSearchParams();
   const queryPuuid = searchParams.get("puuid") ?? "";
   const storedSummonerSnapshot = useSyncExternalStore(
@@ -781,5 +781,31 @@ export default function DraftPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function DraftPageFallback() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <div className="text-xs font-mono uppercase tracking-wider text-dim">Draft Analyzer</div>
+        <div className="rounded-xl border border-primary/15 bg-surface2/35 px-4 py-3 text-sm text-dim">
+          Loading draft tools...
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px_1fr]">
+        <Skeleton className="h-[420px] w-full rounded-lg" />
+        <Skeleton className="h-[420px] w-full rounded-lg" />
+        <Skeleton className="h-[420px] w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+export default function DraftPage() {
+  return (
+    <Suspense fallback={<DraftPageFallback />}>
+      <DraftPageContent />
+    </Suspense>
   );
 }
