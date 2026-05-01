@@ -36,6 +36,22 @@ interface RefreshSummary {
   remaining: number;
 }
 
+interface RefreshTaskResult {
+  fanout_task_id?: string;
+}
+
+interface FanoutTaskResult {
+  dispatched_count?: number;
+  dispatched_tasks?: Array<{ task_id?: string }>;
+}
+
+interface IngestTaskResult {
+  inserted?: boolean;
+  refreshed?: boolean;
+  skipped?: boolean;
+  not_found?: boolean;
+}
+
 export default function RefreshButton({ puuid }: RefreshButtonProps) {
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState<RefreshPhase>("idle");
@@ -98,7 +114,7 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
         throw new Error("refresh_failed");
       }
 
-      const refreshResult = refreshTask.result ?? {};
+      const refreshResult = (refreshTask.result ?? {}) as RefreshTaskResult;
       const fanoutTaskId = typeof refreshResult.fanout_task_id === "string"
         ? refreshResult.fanout_task_id
         : null;
@@ -122,7 +138,7 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
         throw new Error("fanout_failed");
       }
 
-      const fanoutResult = fanoutTask.result ?? {};
+      const fanoutResult = (fanoutTask.result ?? {}) as FanoutTaskResult;
       const dispatchedTasks = Array.isArray(fanoutResult.dispatched_tasks) ? fanoutResult.dispatched_tasks : [];
       const dispatchedCount = typeof fanoutResult.dispatched_count === "number"
         ? fanoutResult.dispatched_count
@@ -146,7 +162,7 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
       const deadline = Date.now() + 45000;
       let lastStatuses: Awaited<ReturnType<typeof getTaskStatus>>[] = [];
       while (mountedRef.current && Date.now() < deadline && taskIds.length > 0) {
-        const statuses = await Promise.all(taskIds.map((taskId) => getTaskStatus(taskId)));
+        const statuses = await Promise.all(taskIds.map((taskId: string) => getTaskStatus(taskId)));
         lastStatuses = statuses;
         invalidateProfileQueries();
 
@@ -159,9 +175,11 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
 
       invalidateProfileQueries();
       const finalStatuses =
-        taskIds.length > 0 ? await Promise.all(taskIds.map((taskId) => getTaskStatus(taskId))) : lastStatuses;
+        taskIds.length > 0
+          ? await Promise.all(taskIds.map((taskId: string) => getTaskStatus(taskId)))
+          : lastStatuses;
       const refreshSummary = finalStatuses.reduce<RefreshSummary>(
-        (acc, status) => {
+        (acc: RefreshSummary, status: Awaited<ReturnType<typeof getTaskStatus>>) => {
           if (status.status === "FAILURE") {
             acc.failed += 1;
             return acc;
@@ -172,12 +190,7 @@ export default function RefreshButton({ puuid }: RefreshButtonProps) {
             return acc;
           }
 
-          const result = (status.result ?? {}) as {
-            inserted?: boolean;
-            refreshed?: boolean;
-            skipped?: boolean;
-            not_found?: boolean;
-          };
+          const result = (status.result ?? {}) as IngestTaskResult;
 
           if (result.not_found) acc.notFound += 1;
           if (result.inserted) acc.inserted += 1;
