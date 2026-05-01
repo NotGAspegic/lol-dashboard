@@ -371,18 +371,18 @@ export default function DraftPage() {
 
   function setChampion(team: "blue" | "red", index: number, championId: number) {
     const sourceKey = `${team}-${index}`;
-    let swapTarget: { team: "blue" | "red"; index: number } | null = null;
-
-    blueTeam.forEach((value, slotIndex) => {
-      if (value === championId && sourceKey !== `blue-${slotIndex}`) {
-        swapTarget = { team: "blue", index: slotIndex };
-      }
-    });
-    redTeam.forEach((value, slotIndex) => {
-      if (value === championId && sourceKey !== `red-${slotIndex}`) {
-        swapTarget = { team: "red", index: slotIndex };
-      }
-    });
+    const blueSwapIndex = blueTeam.findIndex(
+      (value, slotIndex) => value === championId && sourceKey !== `blue-${slotIndex}`
+    );
+    const redSwapIndex = redTeam.findIndex(
+      (value, slotIndex) => value === championId && sourceKey !== `red-${slotIndex}`
+    );
+    const swapTarget =
+      blueSwapIndex >= 0
+        ? { team: "blue" as const, index: blueSwapIndex }
+        : redSwapIndex >= 0
+          ? { team: "red" as const, index: redSwapIndex }
+          : null;
 
     const currentValue = team === "blue" ? blueTeam[index] : redTeam[index];
 
@@ -395,11 +395,11 @@ export default function DraftPage() {
     if (swapTarget) {
       if (swapTarget.team === "blue") {
         setBlueTeam((previous) =>
-          previous.map((value, slotIndex) => (slotIndex === swapTarget?.index ? currentValue ?? null : value))
+          previous.map((value, slotIndex) => (slotIndex === swapTarget.index ? currentValue ?? null : value))
         );
       } else {
         setRedTeam((previous) =>
-          previous.map((value, slotIndex) => (slotIndex === swapTarget?.index ? currentValue ?? null : value))
+          previous.map((value, slotIndex) => (slotIndex === swapTarget.index ? currentValue ?? null : value))
         );
       }
     }
