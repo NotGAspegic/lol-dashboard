@@ -105,8 +105,8 @@ class SummonerSearchResponse(BaseModel):
     """Acknowledgement payload for asynchronous Celery task kickoff."""
 
     status: str
-    task_id: str
-    task_type: str
+    task_id: str | None = None
+    task_type: str | None = None
     puuid: str
     game_name: str
     tag_line: str
@@ -585,6 +585,107 @@ async def search_summoner(
             "puuid": summoner_dto.puuid,
             "game_name": normalized_game_name,
             "tag_line": normalized_tag_line,
+            "region": normalized_region,
+        },
+    )
+
+
+@router.post(
+    "/summoners/{puuid}/onboard",
+    response_model=SummonerSearchResponse,
+)
+async def onboard_summoner_by_puuid(
+    puuid: str,
+    region: str = Query(..., min_length=1),
+    session: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Resolve a participant identity by puuid, then return ready/onboarding metadata."""
+    normalized_puuid = puuid.strip()
+    if not normalized_puuid:
+        raise HTTPException(status_code=422, detail="puuid cannot be empty")
+
+    try:
+        normalized_region, platform_region = _normalize_regions(region)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    existing_summoner = await session.scalar(
+        select(Summoner).where(Summoner.puuid == normalized_puuid)
+    )
+    if existing_summoner is not None:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "ready",
+                "puuid": existing_summoner.puuid,
+                "game_name": existing_summoner.game_name or "Unknown",
+                "tag_line": existing_summoner.tag_line or "NA",
+                "region": existing_summoner.region,
+            },
+        )
+
+    try:
+        async with RiotClient(
+            settings.riot_api_key.get_secret_value(),
+            redis_url=settings.redis_url,
+        ) as riot_client:
+            account = await riot_client.get_account_by_puuid(
+                puuid=normalized_puuid,
+                region=platform_region,
+            )
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 404:
+            raise HTTPException(status_code=404, detail="summoner not found") from exc
+        if status_code == 429:
+            raise HTTPException(status_code=429, detail="riot rate limit exceeded") from exc
+        if status_code is not None and 500 <= status_code < 600:
+            raise HTTPException(status_code=503, detail="riot service unavailable") from exc
+        raise HTTPException(status_code=502, detail="failed to resolve summoner") from exc
+
+    already_tracked = await session.scalar(
+        select(Summoner).where(Summoner.puuid == normalized_puuid)
+    )
+    if already_tracked is not None:
+        already_tracked.game_name = account.gameName or already_tracked.game_name
+        already_tracked.tag_line = account.tagLine or already_tracked.tag_line
+        if account.gameName and account.tagLine:
+            already_tracked.riot_id_slug = build_riot_id_slug(account.gameName, account.tagLine)
+        await session.commit()
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "ready",
+                "puuid": already_tracked.puuid,
+                "game_name": already_tracked.game_name or account.gameName,
+                "tag_line": already_tracked.tag_line or account.tagLine,
+                "region": already_tracked.region,
+            },
+        )
+
+    async_result = onboard_summoner.delay(
+        account.gameName,
+        account.tagLine,
+        normalized_region,
+    )
+    logger.info(
+        "Queued onboard_summoner from puuid (puuid=%s, game_name=%s, tag_line=%s, region=%s, task_id=%s)",
+        normalized_puuid,
+        account.gameName,
+        account.tagLine,
+        normalized_region,
+        async_result.id,
+    )
+    return JSONResponse(
+        status_code=202,
+        content={
+            "status": "onboarding",
+            "task_id": async_result.id,
+            "task_type": "onboard_summoner",
+            "puuid": normalized_puuid,
+            "game_name": account.gameName,
+            "tag_line": account.tagLine,
             "region": normalized_region,
         },
     )

@@ -174,6 +174,18 @@ export async function searchSummoner(
   return res.data;
 }
 
+export async function onboardSummonerByPuuid(
+  puuid: string,
+  region: string
+): Promise<SummonerSearchResponse> {
+  const res = await api.post<SummonerSearchResponse>(
+    `/summoners/${encodeURIComponent(puuid)}/onboard`,
+    null,
+    { params: { region } }
+  );
+  return res.data;
+}
+
 export async function getSummonerSuggestions(
   query: string,
   region: string,

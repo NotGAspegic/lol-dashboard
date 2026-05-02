@@ -3,6 +3,7 @@ import Link from "next/link";
 import ChampionIconClient from "@/components/ui/ChampionIconClient";
 import GoldDiffChart from "@/components/charts/GoldDiffChart";
 import DataFreshnessBadge from "@/components/ui/DataFreshnessBadge";
+import ParticipantIdentity from "@/components/match/ParticipantIdentity";
 import { getMatchDetail, getMatchGoldDiff, getSummoner } from "@/lib/api";
 import { buildSummonerProfilePath } from "@/lib/summonerRoute";
 
@@ -50,7 +51,9 @@ interface ParticipantRowProps {
   champion_id: number;
   game_name: string;
   tag_line?: string | null;
-  profile_href: string;
+  profile_href?: string | null;
+  puuid: string;
+  match_region?: string | null;
   role: string;
   kills: number;
   deaths: number;
@@ -68,6 +71,8 @@ function ParticipantRow({
   game_name,
   tag_line,
   profile_href,
+  puuid,
+  match_region,
   role,
   kills,
   deaths,
@@ -95,37 +100,16 @@ function ParticipantRow({
         <ChampionIconClient championId={champion_id} size={32} />
       </td>
       <td className="px-3 py-3">
-        <Link
-          href={profile_href}
-          className="group inline-flex min-w-0 flex-col rounded-md border border-transparent px-2 py-1 transition-colors hover:border-primary/20 hover:bg-primary/5"
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-sm font-semibold text-white transition-colors group-hover:text-primary">
-              {game_name}
-            </span>
-            {tag_line ? (
-              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-primary/75">
-                #{tag_line}
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-1 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-dim">
-            <span
-              className="rounded-full border px-2 py-0.5"
-              style={{
-                borderColor: `${ROLE_META[role]?.accent ?? "rgba(30,155,232,0.5)"}55`,
-                color: ROLE_META[role]?.accent ?? "#8FB9FF",
-              }}
-            >
-              {roleLabel(role)}
-            </span>
-            {is_current_player ? (
-              <span className="rounded-full border border-primary/25 bg-primary/15 px-2 py-0.5 text-primary">
-                You
-              </span>
-            ) : null}
-          </div>
-        </Link>
+        <ParticipantIdentity
+          puuid={puuid}
+          initialGameName={game_name}
+          initialTagLine={tag_line}
+          initialProfileHref={profile_href}
+          matchRegion={match_region}
+          roleLabel={roleLabel(role)}
+          roleAccent={ROLE_META[role]?.accent ?? "#8FB9FF"}
+          isCurrentPlayer={is_current_player}
+        />
       </td>
       <td className={`px-3 py-3 text-sm font-mono ${kdaColor(kda)}`}>
         {kills}/{deaths}/{assists}
@@ -186,6 +170,10 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
     })
   );
   const summonerByPuuid = new Map(participantSummoners);
+  const matchRegion =
+    (currentPuuid ? (summonerByPuuid.get(currentPuuid)?.region ?? null) : null) ??
+    participantSummoners.find(([, summoner]) => summoner?.region)?.[1]?.region ??
+    null;
 
   // Sort teams by damage descending
   const blueTeamSorted = [...match.blue_team].sort(
@@ -207,8 +195,8 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
           gameName: summoner.game_name,
           tagLine: summoner.tag_line,
         })
-      : `/summoner/${participant.puuid}`;
-    const gameName = summoner?.game_name ?? participant.puuid.slice(0, 8).toUpperCase();
+      : null;
+    const gameName = summoner?.game_name ?? "Untracked player";
     const tagLine = summoner?.tag_line ?? null;
 
     return (
@@ -218,6 +206,8 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
         game_name={gameName}
         tag_line={tagLine}
         profile_href={profileHref}
+        puuid={participant.puuid}
+        match_region={matchRegion}
         role={participant.individualPosition}
         kills={participant.kills}
         deaths={participant.deaths}
