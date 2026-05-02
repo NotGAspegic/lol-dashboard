@@ -6,7 +6,7 @@ Deep League of Legends player analytics with timeline-aware match breakdowns, ra
 
 ## Hero
 
-![Farsight dashboard hero](frontend/public/farsight.png)
+![Farsight dashboard hero](frontend/public/favicon/favicon.svg)
 
 The dashboard is built to answer questions that surface-level stat sites usually skip: how a game opened up, where tempo broke, how a player converts gold into pressure, and whether recent patterns suggest confidence or tilt.
 
