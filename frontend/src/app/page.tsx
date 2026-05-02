@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDebounce } from "use-debounce";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
-import { Star } from "lucide-react";
+import { ArrowDown, BarChart3, BrainCircuit, Star, Swords } from "lucide-react";
 import FavoriteSummonerCard from "@/components/ui/FavoriteSummonerCard";
 import RegionSelect from "@/components/ui/RegionSelect";
 import { getSummonerSuggestions, searchSummoner, getTaskStatus } from "@/lib/api";
@@ -61,6 +61,23 @@ export default function Home() {
     () => new Set(favorites.map((favorite) => favorite.puuid)),
     [favorites]
   );
+  const featureHighlights = [
+    {
+      title: "Deep Match Analysis",
+      description: "Break down carry pressure, role output, and match context beyond raw KDA.",
+      icon: Swords,
+    },
+    {
+      title: "Tilt Detection",
+      description: "Spot streak risk and recent form swings with the ML-backed mindset readout.",
+      icon: BrainCircuit,
+    },
+    {
+      title: "Gold Curve Visualization",
+      description: "See how games actually developed with timeline-aware economy and swing views.",
+      icon: BarChart3,
+    },
+  ];
 
   const handleSearch = async () => {
     if (!isValid || loading) return;
@@ -138,27 +155,95 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8 px-4">
-      {/* Logo + title */}
-      <div className="flex flex-col items-center gap-3">
-        <Image
-          src="/farsight.png"
-          alt="Farsight"
-          width={72}
-          height={72}
-          className="rounded-xl"
-          priority
-        />
-        <h1 className="text-4xl font-bold text-white tracking-tight">
-          Farsight
-        </h1>
-        <p className="text-dim text-sm">
-          League of Legends advanced analytics
-        </p>
-      </div>
+    <div className="min-h-[80vh] px-4">
+      <section className="relative overflow-hidden rounded-[2rem] border border-primary/15 bg-[radial-gradient(circle_at_top,rgba(25,126,199,0.22),transparent_38%),linear-gradient(180deg,rgba(9,18,34,0.96),rgba(7,14,26,0.96))] px-6 py-10 shadow-[0_30px_100px_rgba(0,0,0,0.35)] sm:px-10 sm:py-14">
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(43,192,255,0.14),transparent_48%)] pointer-events-none" />
+        <div className="relative grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-primary/80">
+              Production Live
+            </div>
+            <div className="mt-5 flex items-center gap-4">
+              <Image
+                src="/favicon/favicon.svg"
+                alt="Farsight"
+                width={84}
+                height={84}
+                loading="eager"
+                className="shrink-0"
+                priority
+              />
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                  Farsight
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-dim sm:text-base">
+                  Advanced League of Legends analytics for players who want more than match history.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 max-w-2xl text-base leading-7 text-[#B7C6DB]">
+              Explore ranked identity, deep match analysis, gold curves, vision impact, and
+              ML-backed tilt detection from one live dashboard.
+            </div>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <a
+                href="#summoner-search"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dim"
+              >
+                Try it now
+                <ArrowDown className="h-4 w-4" />
+              </a>
+              <a
+                href="/draft"
+                className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-surface2/60 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-primary/35"
+              >
+                Open Draft Analyzer
+              </a>
+            </div>
+          </div>
 
-      {/* Search box */}
-      <div className="w-full max-w-lg flex flex-col gap-3">
+          <div className="grid gap-3">
+            {featureHighlights.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="rounded-2xl border border-primary/15 bg-surface/75 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl border border-primary/20 bg-primary/10 p-3 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold text-white">
+                        {feature.title}
+                      </h2>
+                      <p className="mt-1 text-sm leading-6 text-dim">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="summoner-search"
+        className="mx-auto mt-10 flex w-full max-w-xl scroll-mt-24 flex-col gap-3"
+      >
+        <div className="text-center">
+          <div className="text-xs font-mono uppercase tracking-[0.24em] text-primary/65">
+            Search Summoner
+          </div>
+          <p className="mt-2 text-sm text-dim">
+            Enter a Riot ID and jump straight into the full profile.
+          </p>
+        </div>
+
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -244,7 +329,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Hint or status message */}
         <div className="h-5 flex items-center justify-center">
           {message ? (
             <div className="flex items-center gap-2">
@@ -284,7 +368,7 @@ export default function Home() {
             </div>
           </div>
         ) : null}
-      </div>
+      </section>
     </div>
   );
 }

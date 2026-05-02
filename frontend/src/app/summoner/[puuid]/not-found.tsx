@@ -5,10 +5,11 @@ export default function SummonerNotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
       <Image
-        src="/farsight.png"
+        src="/favicon/favicon.svg"
         alt="Farsight"
-        width={64}
-        height={64}
+        width={128}
+        height={128}
+        loading="eager"
         className="rounded-xl opacity-40"
       />
       <div className="flex flex-col gap-2">

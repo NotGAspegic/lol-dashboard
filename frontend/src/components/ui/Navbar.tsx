@@ -60,11 +60,12 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <Image
-            src="/farsight.png"
+            src="/favicon/favicon.svg"
             alt="Farsight"
-            width={28}
-            height={28}
-            className="rounded-sm group-hover:brightness-125 transition-all"
+            width={32}
+            height={32}
+            loading="eager"
+            className="group-hover:brightness-125 transition-all"
           />
           <span className="font-bold text-base tracking-tight text-white">
             Farsight

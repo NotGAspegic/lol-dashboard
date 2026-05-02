@@ -37,6 +37,9 @@ class Match(Base):
     """Core persisted match metadata from Riot match info payloads."""
 
     __tablename__ = "matches"
+    __table_args__ = (
+        Index("ix_matches_game_start_timestamp", "gameStartTimestamp"),
+    )
 
     gameId: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     gameDuration: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -58,6 +61,10 @@ class MatchParticipant(Base):
     """Participant-level stats for a given persisted match."""
 
     __tablename__ = "match_participants"
+    __table_args__ = (
+        Index("ix_match_participants_puuid_gameid", "puuid", "gameId"),
+        Index("ix_match_participants_puuid_champion_gameid", "puuid", "championId", "gameId"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     gameId: Mapped[int] = mapped_column(

@@ -22,6 +22,8 @@ SYNC_DATABASE_URL = _ensure_sync_url(settings.database_url)
 
 sync_engine = create_engine(
     SYNC_DATABASE_URL,
+    pool_size=5,
+    max_overflow=10,
     pool_pre_ping=True,
 )
 
