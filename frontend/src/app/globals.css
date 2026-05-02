@@ -1,23 +1,98 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1E9BE8;
-  --color-primary-dim: #1578B8;
-  --color-surface: #0A1628;
-  --color-surface2: #0D1E3A;
-  --color-border: rgba(30,155,232,0.15);
-  --color-dim: #3A5070;
+  --color-primary: var(--primary);
+  --color-primary-dim: var(--primary-dim);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-border: var(--border-soft);
+  --color-dim: var(--dim);
 
   --font-family-mono: "DM Mono", monospace;
+}
+
+:root,
+[data-theme="dark"] {
+  --primary: #1e9be8;
+  --primary-dim: #1578b8;
+  --success: #4caf72;
+  --warning: #c89b3c;
+  --danger: #e8523c;
+  --surface: #0a1628;
+  --surface2: #0d1e3a;
+  --border-soft: rgba(30, 155, 232, 0.15);
+  --dim: #3a5070;
+  --muted-strong: #c8d5e6;
+  --app-bg: #060e1a;
+  --foreground: #dbe8f8;
+  --foreground-strong: #ffffff;
+  --nav-bg: rgba(10, 22, 40, 0.85);
+  --footer-bg: transparent;
+  --chart-grid: rgba(30, 155, 232, 0.08);
+  --chart-axis: #5f7597;
+  --chart-tooltip-bg: #0d1e3a;
+  --chart-tooltip-border: rgba(30, 155, 232, 0.28);
+  --panel-strong: rgba(9, 18, 34, 0.78);
+  --panel-soft: rgba(13, 30, 58, 0.38);
+  --panel-subtle: rgba(13, 30, 58, 0.28);
+  --panel-muted: rgba(13, 30, 58, 0.26);
+  --hero-card-bg: linear-gradient(135deg, rgba(10, 22, 40, 0.98) 0%, rgba(14, 31, 57, 0.96) 100%);
+  --hero-card-border: rgba(30, 155, 232, 0.22);
+  --hero-bg:
+    radial-gradient(circle at top, rgba(25, 126, 199, 0.22), transparent 38%),
+    linear-gradient(180deg, rgba(9, 18, 34, 0.96), rgba(7, 14, 26, 0.96));
+  --hero-accent: radial-gradient(circle at center, rgba(43, 192, 255, 0.14), transparent 48%);
+  --selection-bg: rgba(30, 155, 232, 0.3);
+  --selection-text: #e8f4ff;
+}
+
+[data-theme="light"] {
+  --primary: #0e7bc0;
+  --primary-dim: #0a6199;
+  --success: #2a8f56;
+  --warning: #a67819;
+  --danger: #c94434;
+  --surface: #f4f8fd;
+  --surface2: #e9f0f9;
+  --border-soft: rgba(14, 123, 192, 0.16);
+  --dim: #5f708a;
+  --muted-strong: #495e79;
+  --app-bg: #edf3fb;
+  --foreground: #203047;
+  --foreground-strong: #0c1625;
+  --nav-bg: rgba(243, 248, 253, 0.92);
+  --footer-bg: rgba(255, 255, 255, 0.35);
+  --chart-grid: rgba(14, 123, 192, 0.12);
+  --chart-axis: #6d7f98;
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --chart-tooltip-border: rgba(14, 123, 192, 0.22);
+  --panel-strong: rgba(255, 255, 255, 0.82);
+  --panel-soft: rgba(255, 255, 255, 0.72);
+  --panel-subtle: rgba(255, 255, 255, 0.66);
+  --panel-muted: rgba(255, 255, 255, 0.6);
+  --hero-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 245, 253, 0.96) 100%);
+  --hero-card-border: rgba(14, 123, 192, 0.18);
+  --hero-bg:
+    radial-gradient(circle at top, rgba(14, 123, 192, 0.14), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 245, 252, 0.98));
+  --hero-accent: radial-gradient(circle at center, rgba(58, 164, 224, 0.14), transparent 50%);
+  --selection-bg: rgba(14, 123, 192, 0.18);
+  --selection-text: #0c1625;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body {
+  background: var(--app-bg);
+  color: var(--foreground);
+}
+
 ::selection {
-  background: rgba(30, 155, 232, 0.3);
-  color: #E8F4FF;
+  background: var(--selection-bg);
+  color: var(--selection-text);
 }
 
 ::-webkit-scrollbar {
@@ -25,10 +100,32 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0A1628;
+  background: var(--surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(30, 155, 232, 0.3);
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
   border-radius: 3px;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--foreground-strong) !important;
+}
+
+[data-theme="light"] .hover\:text-white:hover {
+  color: var(--foreground-strong) !important;
+}
+
+[data-theme="light"] .text-green-400,
+[data-theme="light"] .text-green-300 {
+  color: var(--success) !important;
+}
+
+[data-theme="light"] .text-red-400,
+[data-theme="light"] .text-red-300 {
+  color: var(--danger) !important;
+}
+
+[data-theme="light"] .text-amber-300 {
+  color: var(--warning) !important;
 }

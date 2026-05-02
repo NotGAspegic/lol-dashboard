@@ -156,8 +156,14 @@ export default function Home() {
 
   return (
     <div className="min-h-[80vh] px-4">
-      <section className="relative overflow-hidden rounded-[2rem] border border-primary/15 bg-[radial-gradient(circle_at_top,rgba(25,126,199,0.22),transparent_38%),linear-gradient(180deg,rgba(9,18,34,0.96),rgba(7,14,26,0.96))] px-6 py-10 shadow-[0_30px_100px_rgba(0,0,0,0.35)] sm:px-10 sm:py-14">
-        <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(43,192,255,0.14),transparent_48%)] pointer-events-none" />
+      <section
+        className="relative overflow-hidden rounded-[2rem] border border-primary/15 px-6 py-10 shadow-[0_30px_100px_rgba(0,0,0,0.22)] sm:px-10 sm:py-14"
+        style={{ background: "var(--hero-bg)" }}
+      >
+        <div
+          className="absolute inset-y-0 right-0 w-1/2 pointer-events-none"
+          style={{ background: "var(--hero-accent)" }}
+        />
         <div className="relative grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-primary/80">

@@ -366,9 +366,9 @@ function RecentFormSparkline({
     .join(" ");
 
   return (
-    <div className="rounded-lg border border-primary/10 bg-[rgba(9,18,34,0.78)] p-3">
+    <div className="rounded-lg border border-primary/10 p-3" style={{ background: "var(--panel-strong)" }}>
       <svg viewBox={`0 0 ${width} ${height}`} className="h-36 w-full">
-        <line x1="0" y1={height - 8} x2={width} y2={height - 8} stroke="rgba(58,80,112,0.45)" strokeDasharray="4 4" />
+        <line x1="0" y1={height - 8} x2={width} y2={height - 8} stroke="color-mix(in srgb, var(--chart-axis) 45%, transparent)" strokeDasharray="4 4" />
         <polyline
           fill="none"
           stroke={color}
@@ -405,8 +405,8 @@ function LpHistoryChart({
     const point = history[0];
 
     return (
-      <div className="rounded-lg border border-primary/10 bg-[rgba(9,18,34,0.78)] p-4">
-        <div className="flex min-h-36 flex-col justify-between gap-4 rounded-lg border border-dashed border-primary/10 bg-[rgba(13,30,58,0.28)] p-4">
+      <div className="rounded-lg border border-primary/10 p-4" style={{ background: "var(--panel-strong)" }}>
+        <div className="flex min-h-36 flex-col justify-between gap-4 rounded-lg border border-dashed border-primary/10 p-4" style={{ background: "var(--panel-subtle)" }}>
           <div className="text-[11px] font-mono uppercase tracking-wide text-dim">Single ranked snapshot</div>
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -453,7 +453,7 @@ function LpHistoryChart({
     const sameDayWindow = isSameCalendarDay(earliestPoint.captured_at, latestPoint.captured_at);
 
     return (
-      <div className="rounded-lg border border-primary/10 bg-[rgba(9,18,34,0.78)] p-3">
+      <div className="rounded-lg border border-primary/10 p-3" style={{ background: "var(--panel-strong)" }}>
         <div className="mb-3 flex items-center justify-between gap-4">
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-semibold text-white">Last 30d</span>
@@ -467,7 +467,7 @@ function LpHistoryChart({
           </span>
         </div>
 
-        <div className="rounded-lg border border-primary/10 bg-[rgba(13,30,58,0.26)] p-4">
+        <div className="rounded-lg border border-primary/10 p-4" style={{ background: "var(--panel-muted)" }}>
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wide text-dim">
             <span>{sameDayWindow ? "Earlier snapshot" : formatShortDate(earliestPoint.captured_at)}</span>
             <span>{formatShortDate(latestPoint.captured_at)}</span>
@@ -476,11 +476,11 @@ function LpHistoryChart({
           <div className="relative mt-6 h-16">
             <div className="absolute left-6 right-6 top-1/2 h-px -translate-y-1/2 border-t border-dashed border-primary/20" />
             <div className="absolute left-6 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-              <span className="h-4 w-4 rounded-full border-2 border-white bg-amber-400 shadow-[0_0_18px_rgba(245,158,11,0.35)]" />
+              <span className="h-4 w-4 rounded-full border-2 border-white shadow-[0_0_18px_color-mix(in_srgb,var(--warning)_35%,transparent)]" style={{ background: "var(--warning)" }} />
             </div>
             <div className="absolute right-6 top-1/2 flex translate-x-1/2 -translate-y-1/2 items-center justify-center">
               <span
-                className="h-4 w-4 rounded-full border-2 border-white shadow-[0_0_18px_rgba(110,231,255,0.3)]"
+                className="h-4 w-4 rounded-full border-2 border-white shadow-[0_0_18px_color-mix(in_srgb,var(--primary)_30%,transparent)]"
                 style={{ backgroundColor: color }}
               />
             </div>
@@ -576,7 +576,7 @@ function LpHistoryChart({
               y1={y}
               x2={width - paddingX}
               y2={y}
-              stroke="rgba(58,80,112,0.28)"
+              stroke="color-mix(in srgb, var(--chart-axis) 30%, transparent)"
               strokeDasharray="4 6"
             />
           );
@@ -588,7 +588,7 @@ function LpHistoryChart({
             y1={paddingTop}
             x2={point.x}
             y2={height - paddingBottom}
-            stroke="rgba(58,80,112,0.2)"
+            stroke="color-mix(in srgb, var(--chart-axis) 22%, transparent)"
             strokeDasharray="3 6"
           />
         ))}
@@ -612,11 +612,11 @@ function LpHistoryChart({
           return (
             <g key={`${point.captured_at}-${isPeak ? "peak" : "latest"}`}>
               <circle cx={point.x} cy={point.y} r="8" fill={`${color}30`} />
-              <circle cx={point.x} cy={point.y} r="5.5" fill={isPeak ? "#F59E0B" : color} stroke="#E6F0FF" strokeWidth="1.5" />
+              <circle cx={point.x} cy={point.y} r="5.5" fill={isPeak ? "var(--warning)" : color} stroke="var(--selection-text)" strokeWidth="1.5" />
             </g>
           );
         })}
-        <line x1={paddingX} y1={height - paddingBottom} x2={width - paddingX} y2={height - paddingBottom} stroke="rgba(58,80,112,0.45)" strokeDasharray="4 4" />
+        <line x1={paddingX} y1={height - paddingBottom} x2={width - paddingX} y2={height - paddingBottom} stroke="color-mix(in srgb, var(--chart-axis) 45%, transparent)" strokeDasharray="4 4" />
       </svg>
       <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] font-mono uppercase tracking-wide text-dim">
         {xAxisLabels.map((point, index) => (
@@ -628,7 +628,7 @@ function LpHistoryChart({
           </span>
         ))}
       </div>
-      <div className="mt-3 rounded-lg border border-primary/10 bg-[rgba(13,30,58,0.34)] p-3">
+      <div className="mt-3 rounded-lg border border-primary/10 p-3" style={{ background: "var(--panel-soft)" }}>
         <div className="text-xs font-mono uppercase tracking-wide text-dim">
           Latest snapshot
         </div>
@@ -747,7 +747,7 @@ function TopRolesCard({
 
       {visibleRoles.length > 0 ? (
         <>
-          <div className="flex min-h-[92px] items-end gap-3 rounded-lg border border-primary/10 bg-[rgba(9,18,34,0.78)] px-3 pb-3 pt-4">
+          <div className="flex min-h-[92px] items-end gap-3 rounded-lg border border-primary/10 px-3 pb-3 pt-4" style={{ background: "var(--panel-strong)" }}>
             {visibleRoles.map((role) => {
               const meta = ROLE_META[role.role] ?? { short: role.role, label: role.role, accent: "#1E9BE8" };
               const height = Math.max(12, Math.round(role.share * 0.72));
@@ -801,7 +801,7 @@ function TopRolesCard({
           </div>
         </>
       ) : (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-primary/15 bg-[rgba(13,30,58,0.38)] px-4 text-center text-sm text-dim">
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-primary/15 px-4 text-center text-sm text-dim" style={{ background: "var(--panel-soft)" }}>
           Play more ranked across roles to build a role profile.
         </div>
       )}
@@ -829,7 +829,7 @@ function QueueCard({
           <span className="text-sm font-semibold text-white">{label}</span>
           <span className="text-xs font-mono uppercase tracking-wide text-dim">Unavailable</span>
         </div>
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-primary/15 bg-[rgba(13,30,58,0.38)] px-4 text-center text-sm text-dim">
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-primary/15 px-4 text-center text-sm text-dim" style={{ background: "var(--panel-soft)" }}>
           {emptyMessage ?? "No current ranked entry from Riot for this queue."}
         </div>
       </Card>
@@ -844,7 +844,7 @@ function QueueCard({
       className={compact ? "flex min-h-[168px] flex-col gap-4" : "flex min-h-[280px] flex-col gap-5"}
       style={{
         borderColor: `${accent}40`,
-        background: `linear-gradient(180deg, rgba(10,22,40,0.98) 0%, rgba(13,30,58,0.92) 100%)`,
+        background: `linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, ${accent}10) 0%, color-mix(in srgb, var(--surface2) 90%, ${accent}8) 100%)`,
       }}
     >
       <div className="flex items-center justify-between">

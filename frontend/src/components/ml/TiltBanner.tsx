@@ -14,9 +14,9 @@ interface TiltBannerProps {
 }
 
 function tiltColor(score: number) {
-  if (score >= 70) return "#E8523C";
-  if (score >= 40) return "#C89B3C";
-  return "#4CAF72";
+  if (score >= 70) return "var(--danger)";
+  if (score >= 40) return "var(--warning)";
+  return "var(--success)";
 }
 
 function TiltGauge({ score }: { score: number }) {
@@ -83,9 +83,13 @@ export default function TiltBanner({ puuid }: TiltBannerProps) {
 
   const score = Math.max(0, Math.min(100, data.tilt_score * 100));
   const isHigh = data.tilt_level === "high";
-  const accent = isHigh ? "#E8523C" : "#C89B3C";
-  const border = isHigh ? "rgba(232,82,60,0.45)" : "rgba(200,155,60,0.38)";
-  const glow = isHigh ? "rgba(232,82,60,0.08)" : "rgba(200,155,60,0.07)";
+  const accent = isHigh ? "var(--danger)" : "var(--warning)";
+  const border = isHigh
+    ? "color-mix(in srgb, var(--danger) 45%, transparent)"
+    : "color-mix(in srgb, var(--warning) 38%, transparent)";
+  const glow = isHigh
+    ? "color-mix(in srgb, var(--danger) 9%, transparent)"
+    : "color-mix(in srgb, var(--warning) 8%, transparent)";
 
   return (
     <Card
@@ -93,7 +97,7 @@ export default function TiltBanner({ puuid }: TiltBannerProps) {
       style={
         {
           borderColor: border,
-          background: `linear-gradient(180deg, ${glow} 0%, rgba(10,22,40,0.98) 100%)`,
+          background: `linear-gradient(180deg, ${glow} 0%, color-mix(in srgb, var(--surface) 96%, transparent) 100%)`,
         } as CSSProperties
       }
     >
@@ -116,7 +120,7 @@ export default function TiltBanner({ puuid }: TiltBannerProps) {
               {data.games_analyzed} games
             </span>
           </div>
-          <p className="mt-1 text-sm text-white">
+          <p className="mt-1 text-sm text-[var(--foreground-strong)]">
             {isHigh
               ? "Consider taking a break — your recent performance suggests tilt."
               : "Heads-up: your recent games show some tilt signals."}
@@ -129,7 +133,7 @@ export default function TiltBanner({ puuid }: TiltBannerProps) {
       {isHigh ? (
         <ul className="grid gap-2">
           {data.reasons.slice(0, 3).map((reason) => (
-            <li key={reason} className="flex gap-2 text-sm text-slate-200">
+            <li key={reason} className="flex gap-2 text-sm text-[var(--foreground)]">
               <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
               <span>{reason}</span>
             </li>
@@ -138,7 +142,11 @@ export default function TiltBanner({ puuid }: TiltBannerProps) {
       ) : data.reasons[0] ? (
         <div
           className="rounded-lg border px-3 py-2 text-sm text-slate-200"
-          style={{ borderColor: "rgba(200,155,60,0.24)", background: "rgba(200,155,60,0.05)" }}
+          style={{
+            borderColor: "color-mix(in srgb, var(--warning) 24%, transparent)",
+            background: "color-mix(in srgb, var(--warning) 6%, transparent)",
+            color: "var(--foreground)",
+          }}
         >
           {data.reasons[0]}
         </div>

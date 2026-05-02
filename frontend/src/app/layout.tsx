@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: "Farsight",
     images: [
       {
-        url: "/favicon/favicon.svg",
+        url: "/graph.png",
         width: 512,
         height: 512,
         alt: "Farsight logo",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     title: "Farsight — League of Legends Analytics",
     description:
       "Advanced League of Legends analytics with deep match analysis, gold curve visualization, vision tracking, and ML-powered tilt detection.",
-    images: ["/favicon/favicon.svg"],
+    images: ["/graph.png"],
   },
   icons: {
     icon: [
@@ -55,10 +55,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
         <body
           className="min-h-screen antialiased"
-          style={{ background: "#060E1A", fontFamily: "Inter, sans-serif" }}
+          style={{ background: "var(--app-bg)", color: "var(--foreground)", fontFamily: "Inter, sans-serif" }}
         >
         <Providers>
           <Navbar />

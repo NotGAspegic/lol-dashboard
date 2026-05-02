@@ -53,21 +53,21 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
   return (
     <div
       className="border rounded-lg p-3 flex flex-col gap-2"
-      style={{ background: "#0D1E3A", borderColor: "rgba(30,155,232,0.3)", minWidth: 160 }}
+      style={{ background: "var(--chart-tooltip-bg)", borderColor: "var(--chart-tooltip-border)", minWidth: 160 }}
     >
       <div className="flex items-center gap-2">
         <ChampionIconClient championId={d.champion_id} size={28} />
-        <span className="text-xs font-bold" style={{ color: d.win ? "#4CAF72" : "#E8523C" }}>
+        <span className="text-xs font-bold" style={{ color: d.win ? "var(--success)" : "var(--danger)" }}>
           {d.win ? "WIN" : "LOSS"}
         </span>
       </div>
       <div className="text-white text-sm font-mono">
         {d.kills}/{d.deaths}/{d.assists}
       </div>
-      <div className="text-xs font-mono" style={{ color: "#3A5070" }}>
+      <div className="text-xs font-mono" style={{ color: "var(--chart-axis)" }}>
         {(d.damage_share * 100).toFixed(1)}% dmg share
       </div>
-      <div className="text-xs font-mono" style={{ color: "#3A5070" }}>
+      <div className="text-xs font-mono" style={{ color: "var(--chart-axis)" }}>
         {d.kda.toFixed(2)} KDA · {formatDuration(d.game_duration)}
       </div>
     </div>
@@ -75,10 +75,10 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
 }
 
 const QUADRANT_LABELS = [
-  { x: "right", y: "top", label: "Efficient Carry", color: "#4CAF72" },
-  { x: "left", y: "top", label: "High Impact Low KDA", color: "#C89B3C" },
-  { x: "right", y: "bottom", label: "Safe Low Impact", color: "#3A5070" },
-  { x: "left", y: "bottom", label: "Underperforming", color: "#E8523C" },
+  { x: "right", y: "top", label: "Efficient Carry", color: "var(--success)" },
+  { x: "left", y: "top", label: "High Impact Low KDA", color: "var(--warning)" },
+  { x: "right", y: "bottom", label: "Safe Low Impact", color: "var(--chart-axis)" },
+  { x: "left", y: "bottom", label: "Underperforming", color: "var(--danger)" },
 ];
 
 export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
@@ -120,7 +120,7 @@ export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
     return (
       <div
         className="h-80 flex items-center justify-center rounded-lg border text-sm font-mono"
-        style={{ borderColor: "rgba(30,155,232,0.1)", color: "#3A5070" }}
+        style={{ borderColor: "var(--border-soft)", color: "var(--chart-axis)" }}
       >
       <span>Not enough data for trend chart.</span>
       <span className="text-xs">Play more ranked games to see your KDA trend.</span>
@@ -163,17 +163,17 @@ export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
 
       {/* Quadrant labels */}
       <div className="relative">
-        <div className="absolute inset-0 pointer-events-none z-10">
-          <div className="absolute top-2 right-2 text-xs font-mono opacity-40" style={{ color: "#4CAF72" }}>
+          <div className="absolute inset-0 pointer-events-none z-10">
+          <div className="absolute top-2 right-2 text-xs font-mono opacity-40" style={{ color: "var(--success)" }}>
             Efficient Carry ↗
           </div>
-          <div className="absolute top-8 left-2 text-xs font-mono opacity-40" style={{ color: "#C89B3C" }}>
+          <div className="absolute top-8 left-2 text-xs font-mono opacity-40" style={{ color: "var(--warning)" }}>
             ↖ High Impact Low KDA
           </div>
-          <div className="absolute bottom-8 right-2 text-xs font-mono opacity-40" style={{ color: "#3A5070" }}>
+          <div className="absolute bottom-8 right-2 text-xs font-mono opacity-40" style={{ color: "var(--chart-axis)" }}>
             Safe Low Impact ↘
           </div>
-          <div className="absolute bottom-8 left-2 text-xs font-mono opacity-40" style={{ color: "#E8523C" }}>
+          <div className="absolute bottom-8 left-2 text-xs font-mono opacity-40" style={{ color: "var(--danger)" }}>
             ↙ Underperforming
           </div>
         </div>
@@ -182,20 +182,20 @@ export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
           <ScatterChart margin={{ top: 16, right: 16, left: -16, bottom: 0 }}>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(30,155,232,0.08)"
+              stroke="var(--chart-grid)"
             />
             <XAxis
               type="number"
               dataKey="kda"
               name="KDA"
-              tick={{ fill: "#3A5070", fontSize: 11, fontFamily: "monospace" }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11, fontFamily: "monospace" }}
               axisLine={false}
               tickLine={false}
               label={{
                 value: "KDA",
                 position: "insideBottom",
                 offset: -4,
-                fill: "#3A5070",
+                fill: "var(--chart-axis)",
                 fontSize: 11,
                 fontFamily: "monospace",
               }}
@@ -204,7 +204,7 @@ export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
               type="number"
               dataKey="damage_share"
               name="Damage Share"
-              tick={{ fill: "#3A5070", fontSize: 11, fontFamily: "monospace" }}
+              tick={{ fill: "var(--chart-axis)", fontSize: 11, fontFamily: "monospace" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
@@ -216,28 +216,28 @@ export default function PerformanceScatter({ puuid }: PerformanceScatterProps) {
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ strokeDasharray: "3 3", stroke: "rgba(30,155,232,0.2)" }}
+              cursor={{ strokeDasharray: "3 3", stroke: "color-mix(in srgb, var(--primary) 30%, transparent)" }}
             />
             <ReferenceLine
               x={medianKda}
-              stroke="rgba(30,155,232,0.15)"
+              stroke="color-mix(in srgb, var(--primary) 18%, transparent)"
               strokeDasharray="4 4"
             />
             <ReferenceLine
               y={medianDamageShare}
-              stroke="rgba(30,155,232,0.15)"
+              stroke="color-mix(in srgb, var(--primary) 18%, transparent)"
               strokeDasharray="4 4"
             />
             <Scatter
               name="Wins"
               data={wins}
-              fill="#4CAF72"
+              fill="var(--success)"
               fillOpacity={0.7}
             />
             <Scatter
               name="Losses"
               data={losses}
-              fill="#E8523C"
+              fill="var(--danger)"
               fillOpacity={0.7}
             />
           </ScatterChart>

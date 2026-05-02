@@ -37,8 +37,8 @@ function CustomTooltip({
     <div
       className="border rounded-lg p-3 flex flex-col gap-2"
       style={{
-        background: "#0D1E3A",
-        borderColor: "rgba(30,155,232,0.3)",
+        background: "var(--chart-tooltip-bg)",
+        borderColor: "var(--chart-tooltip-border)",
         minWidth: 160,
       }}
     >
@@ -46,7 +46,7 @@ function CustomTooltip({
         <ChampionIconClient championId={d.champion_id} size={28} />
         <span
           className="text-xs font-bold"
-          style={{ color: d.win ? "#4CAF72" : "#E8523C" }}
+          style={{ color: d.win ? "var(--success)" : "var(--danger)" }}
         >
           {d.win ? "WIN" : "LOSS"}
         </span>
@@ -58,12 +58,12 @@ function CustomTooltip({
         className="text-xs font-mono"
         style={{
           color:
-            d.kda >= 4 ? "#1E9BE8" : d.kda >= 2 ? "#ffffff" : "#3A5070",
+            d.kda >= 4 ? "var(--primary)" : d.kda >= 2 ? "var(--foreground-strong)" : "var(--chart-axis)",
         }}
       >
         {d.kda.toFixed(2)} KDA
       </div>
-      <div className="text-xs" style={{ color: "#3A5070" }}>
+      <div className="text-xs" style={{ color: "var(--chart-axis)" }}>
         Game {d.game_index}
       </div>
     </div>
@@ -102,8 +102,8 @@ export default function KDATrendChart({ puuid }: KDATrendChartProps) {
       <div
         className="h-56 flex items-center justify-center rounded-lg border text-sm font-mono"
         style={{
-          borderColor: "rgba(30,155,232,0.1)",
-          color: "#3A5070",
+          borderColor: "var(--border-soft)",
+          color: "var(--chart-axis)",
         }}
       >
         <span>Not enough data for trend chart.</span>
@@ -138,24 +138,24 @@ export default function KDATrendChart({ puuid }: KDATrendChartProps) {
         >
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="rgba(30,155,232,0.08)"
+            stroke="var(--chart-grid)"
             vertical={false}
           />
           <XAxis
             dataKey="game_index"
-            tick={{ fill: "#3A5070", fontSize: 11, fontFamily: "monospace" }}
+            tick={{ fill: "var(--chart-axis)", fontSize: 11, fontFamily: "monospace" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: "#3A5070", fontSize: 11, fontFamily: "monospace" }}
+            tick={{ fill: "var(--chart-axis)", fontSize: 11, fontFamily: "monospace" }}
             axisLine={false}
             tickLine={false}
             domain={[0, "auto"]}
           />
           <Tooltip
             content={<CustomTooltip />}
-            cursor={{ stroke: "rgba(30,155,232,0.2)", strokeWidth: 1 }}
+            cursor={{ stroke: "color-mix(in srgb, var(--primary) 32%, transparent)", strokeWidth: 1 }}
           />
           <Legend
             verticalAlign="top"
@@ -164,28 +164,28 @@ export default function KDATrendChart({ puuid }: KDATrendChartProps) {
             wrapperStyle={{
               fontSize: "11px",
               fontFamily: "monospace",
-              color: "#3A5070",
+              color: "var(--chart-axis)",
               paddingBottom: "8px",
             }}
           />
           <ReferenceLine
             y={3}
-            stroke="rgba(30,155,232,0.3)"
+            stroke="color-mix(in srgb, var(--primary) 36%, transparent)"
             strokeDasharray="4 4"
             label={{
               value: "carry",
-              fill: "#3A5070",
+              fill: "var(--chart-axis)",
               fontSize: 10,
               fontFamily: "monospace",
             }}
           />
           <ReferenceLine
             y={1}
-            stroke="rgba(232,82,60,0.2)"
+            stroke="color-mix(in srgb, var(--danger) 28%, transparent)"
             strokeDasharray="4 4"
             label={{
               value: "even",
-              fill: "#3A5070",
+              fill: "var(--chart-axis)",
               fontSize: 10,
               fontFamily: "monospace",
             }}
@@ -205,18 +205,18 @@ export default function KDATrendChart({ puuid }: KDATrendChartProps) {
                   cx={cx}
                   cy={cy}
                   r={4}
-                  fill={payload.win ? "#4CAF72" : "#E8523C"}
+                  fill={payload.win ? "var(--success)" : "var(--danger)"}
                   stroke="none"
                 />
               );
             }}
-            activeDot={{ r: 6, fill: "#1E9BE8", stroke: "#0A1628", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "var(--primary)", stroke: "var(--surface)", strokeWidth: 2 }}
           />
           <Line
             type="monotone"
             dataKey="rolling_avg"
             name="5-Game Avg"
-            stroke="rgba(255,255,255,0.75)"
+            stroke="color-mix(in srgb, var(--foreground-strong) 78%, transparent)"
             strokeWidth={2.5}
             dot={false}
             activeDot={false}

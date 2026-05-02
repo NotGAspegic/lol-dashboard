@@ -75,8 +75,8 @@ export default function ProfilePageContent({
       <Card
         className="flex flex-col gap-5"
         style={{
-          background: "linear-gradient(135deg, rgba(10,22,40,0.98) 0%, rgba(14,31,57,0.96) 100%)",
-          borderColor: "rgba(30,155,232,0.22)",
+          background: "var(--hero-card-bg)",
+          borderColor: "var(--hero-card-border)",
         }}
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

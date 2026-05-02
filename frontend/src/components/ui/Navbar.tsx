@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Star, UserRound } from "lucide-react";
-import { useMemo, useSyncExternalStore } from "react";
+import { Moon, Star, Sun, UserRound } from "lucide-react";
+import { useMemo, useState, useSyncExternalStore, useEffect } from "react";
+import { useTheme } from "next-themes";
 
 import FavoriteSummonerCard from "@/components/ui/FavoriteSummonerCard";
 import {
@@ -21,6 +22,11 @@ import { buildSummonerProfilePath, formatSummonerDisplayName } from "@/lib/summo
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const currentSummonerSnapshot = useSyncExternalStore(
     subscribeToCurrentSummonerStore,
     readCurrentSummonerSnapshot,
@@ -53,8 +59,8 @@ export default function Navbar() {
     <nav
       className="border-b sticky top-0 z-50 backdrop-blur-sm"
       style={{
-        background: "rgba(10,22,40,0.85)",
-        borderColor: "rgba(30,155,232,0.15)",
+        background: "var(--nav-bg)",
+        borderColor: "var(--border-soft)",
       }}
     >
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -146,17 +152,32 @@ export default function Navbar() {
           ) : null}
           <Link
             href="/draft"
-            style={{ color: "#3A5070" }}
+            style={{ color: "var(--dim)" }}
             className="hover:text-white transition-colors"
           >
             Draft
           </Link>
+          <button
+            type="button"
+            aria-label={mounted && resolvedTheme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+            onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+            className="flex items-center gap-2 rounded-lg border border-primary/15 bg-surface2/55 px-3 py-2 text-dim transition-colors hover:border-primary/30 hover:text-white"
+          >
+            {mounted && resolvedTheme === "light" ? (
+              <Moon className="h-3.5 w-3.5" />
+            ) : (
+              <Sun className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">
+              {mounted && resolvedTheme === "light" ? "Dark" : "Light"}
+            </span>
+          </button>
           <a
             aria-label="View source on GitHub"
             href="https://github.com/NotGAspegic/lol-dashboard"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#3A5070" }}
+            style={{ color: "var(--dim)" }}
             className="hover:text-white transition-colors"
           >
             GitHub

@@ -78,7 +78,7 @@ export default function PlaystyleRadar({ puuid }: PlaystyleRadarProps) {
     return (
       <div
         className="h-80 flex items-center justify-center rounded-lg border text-sm font-mono"
-        style={{ borderColor: "rgba(30,155,232,0.1)", color: "#3A5070" }}
+        style={{ borderColor: "var(--border-soft)", color: "var(--chart-axis)" }}
       >
         Not enough data for playstyle analysis.
       </div>
@@ -89,15 +89,15 @@ export default function PlaystyleRadar({ puuid }: PlaystyleRadarProps) {
     <div className="flex flex-col gap-3">
       <ResponsiveContainer width="100%" height={280}>
         <RadarChart data={radarData}>
-          <PolarGrid stroke="rgba(30,155,232,0.15)" />
+          <PolarGrid stroke="color-mix(in srgb, var(--primary) 18%, transparent)" />
           <PolarAngleAxis
             dataKey="axis"
-            tick={{ fill: "#C8C0B0", fontSize: 10, fontFamily: "monospace" }}
+            tick={{ fill: "var(--muted-strong)", fontSize: 10, fontFamily: "monospace" }}
           />
           <Radar
             dataKey="value"
-            stroke="#1E9BE8"
-            fill="rgba(30,155,232,0.2)"
+            stroke="var(--primary)"
+            fill="color-mix(in srgb, var(--primary) 22%, transparent)"
             strokeWidth={2}
           />
         </RadarChart>
@@ -105,7 +105,7 @@ export default function PlaystyleRadar({ puuid }: PlaystyleRadarProps) {
 
       <p
         className="text-xs font-mono text-center"
-        style={{ color: "#3A5070", lineHeight: "1.4" }}
+        style={{ color: "var(--chart-axis)", lineHeight: "1.4" }}
       >
         {interpretation}
       </p>

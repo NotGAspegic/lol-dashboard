@@ -5,7 +5,7 @@ const RIOT_DISCLAIMER =
 
 export default function Footer() {
   return (
-    <footer className="border-t border-primary/10 mt-10">
+    <footer className="mt-10 border-t border-primary/10 bg-[var(--footer-bg)]">
       <div className="max-w-6xl mx-auto px-4 py-5 text-center">
         <p className="text-[11px] leading-relaxed text-dim max-w-4xl mx-auto">
           {RIOT_DISCLAIMER}
