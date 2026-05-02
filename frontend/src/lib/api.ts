@@ -11,6 +11,32 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+export function getApiErrorMessage(error: unknown, fallback = "Request failed."): string {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string" && detail.trim()) {
+      return detail;
+    }
+    if (Array.isArray(detail) && detail.length > 0) {
+      const firstMessage = detail
+        .map((item) => (typeof item?.msg === "string" ? item.msg : null))
+        .find(Boolean);
+      if (firstMessage) {
+        return firstMessage;
+      }
+    }
+    if (error.message) {
+      return error.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export interface Summoner {
   puuid: string;
   id: string | null;

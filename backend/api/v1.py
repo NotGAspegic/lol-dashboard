@@ -789,7 +789,26 @@ async def predict_tilt_endpoint(
         if cached is not None:
             return TiltPredictionResponse(**cached)
 
-    prediction = await run_tilt_prediction(puuid, session)
+    try:
+        _require_model_files(
+            [
+                TILT_MODEL_PATH,
+                TILT_FEATURES_PATH,
+                TILT_META_PATH,
+            ]
+        )
+        prediction = await run_tilt_prediction(puuid, session)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("tilt prediction failed for puuid=%s", puuid)
+        raise HTTPException(
+            status_code=503,
+            detail="Tilt prediction is temporarily unavailable.",
+        ) from exc
+
     payload = TiltPredictionResponse(**prediction)
 
     if redis is not None:
@@ -1067,6 +1086,13 @@ async def predict_draft_endpoint(
         )
 
     try:
+        _require_model_files(
+            [
+                DRAFT_MODEL_PATH,
+                DRAFT_FEATURES_PATH,
+                DRAFT_META_PATH,
+            ]
+        )
         prediction = await run_draft_prediction(
             puuid=payload.puuid,
             ally_champion_ids=payload.ally_champion_ids,
@@ -1076,6 +1102,14 @@ async def predict_draft_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("draft prediction failed for puuid=%s", payload.puuid)
+        raise HTTPException(
+            status_code=503,
+            detail="Draft prediction is temporarily unavailable.",
+        ) from exc
 
     return DraftPredictionResponse(**prediction)
 

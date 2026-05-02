@@ -5,11 +5,12 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "use-debounce";
 import Image from "next/image";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, BarChart3, BrainCircuit, Star, Swords } from "lucide-react";
 import FavoriteSummonerCard from "@/components/ui/FavoriteSummonerCard";
 import RegionSelect from "@/components/ui/RegionSelect";
-import { getSummonerSuggestions, searchSummoner, getTaskStatus } from "@/lib/api";
+import { getApiErrorMessage, getSummonerSuggestions, searchSummoner, getTaskStatus } from "@/lib/api";
 import { buildSummonerProfilePath } from "@/lib/summonerRoute";
 import {
   FavoriteSummonerIdentity,
@@ -126,8 +127,20 @@ export default function Home() {
           setLoading(false);
         }
       }, 2000);
-    } catch {
-      setMessage("Failed to reach the API. Is it running?");
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        router.push(
+          buildSummonerProfilePath({
+            puuid: "",
+            region,
+            gameName: gameName.trim(),
+            tagLine: tagLine.trim(),
+          })
+        );
+        return;
+      }
+
+      setMessage(getApiErrorMessage(error, "Failed to reach the API. Is it running?"));
       setLoading(false);
     }
   };

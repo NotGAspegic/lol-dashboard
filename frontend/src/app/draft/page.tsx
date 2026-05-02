@@ -32,7 +32,7 @@ import {
   SavedDraft,
   subscribeToSavedDraftsStore,
 } from "@/lib/savedDrafts";
-import { getDraftPrediction } from "@/lib/api";
+import { getApiErrorMessage, getDraftPrediction } from "@/lib/api";
 import { formatSummonerDisplayName } from "@/lib/summonerRoute";
 
 
@@ -729,7 +729,12 @@ function DraftPageContent() {
               ) : draftQuery.isError || !draftQuery.data ? (
                 <div className="flex flex-col items-center gap-2 text-center">
                   <div className="text-sm font-semibold text-white">Prediction unavailable</div>
-                  <div className="text-xs text-dim">Check the selected summoner and try again.</div>
+                  <div className="max-w-[240px] text-xs leading-5 text-dim">
+                    {getApiErrorMessage(
+                      draftQuery.error,
+                      "The prediction service is unavailable right now. Try again in a moment."
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex w-full flex-col items-center gap-3">

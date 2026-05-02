@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation";
-
 import ProfilePageContent from "@/components/profile/ProfilePageContent";
+import UnknownSummonerState from "@/components/profile/UnknownSummonerState";
 import { getStatsOverview, getSummonerByRiotSlug } from "@/lib/api";
 
 
@@ -13,7 +12,7 @@ export default async function FriendlyProfilePage({ params }: FriendlyProfilePag
 
   const summoner = await getSummonerByRiotSlug(region, riotId).catch(() => null);
   if (!summoner) {
-    notFound();
+    return <UnknownSummonerState region={region} riotIdSlug={riotId} />;
   }
 
   const stats = await getStatsOverview(summoner.puuid).catch(() => ({
