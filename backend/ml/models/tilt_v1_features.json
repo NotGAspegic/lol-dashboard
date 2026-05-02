@@ -1,0 +1,11 @@
+[
+  "consecutive_losses",
+  "kda_slope",
+  "death_trend",
+  "inter_game_minutes_mean",
+  "inter_game_minutes_min",
+  "champ_variety",
+  "win_rate_window",
+  "avg_kda_window",
+  "career_kda"
+]

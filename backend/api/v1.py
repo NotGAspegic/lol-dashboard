@@ -717,6 +717,24 @@ def _require_model_files(paths: list[Path]) -> None:
         )
 
 
+def _metadata_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _metadata_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
+def _metadata_int(value: Any) -> int:
+    if value is None:
+        return 0
+    return int(value)
+
+
 def _build_ranked_queue_summary(entry: Any) -> RankedQueueSummary:
     total_games = entry.wins + entry.losses
     winrate = (entry.wins / total_games * 100) if total_games else 0.0
@@ -794,7 +812,6 @@ async def predict_tilt_endpoint(
             [
                 TILT_MODEL_PATH,
                 TILT_FEATURES_PATH,
-                TILT_META_PATH,
             ]
         )
         prediction = await run_tilt_prediction(puuid, session)
@@ -1043,10 +1060,8 @@ async def get_ml_status() -> MLStatusResponse:
         [
             TILT_MODEL_PATH,
             TILT_FEATURES_PATH,
-            TILT_META_PATH,
             DRAFT_MODEL_PATH,
             DRAFT_FEATURES_PATH,
-            DRAFT_META_PATH,
         ]
     )
 
@@ -1058,10 +1073,10 @@ async def get_ml_status() -> MLStatusResponse:
     models = {
         model_name: ModelStatus(
             loaded=True,
-            trained_at=model_data["metadata"]["trained_at"],
-            test_auc=float(model_data["metadata"]["test_auc"]),
-            training_samples=int(model_data["metadata"]["training_samples"]),
-            model_version=str(model_data["metadata"]["model_version"]),
+            trained_at=_metadata_str(model_data["metadata"].get("trained_at")),
+            test_auc=_metadata_float(model_data["metadata"].get("test_auc")),
+            training_samples=_metadata_int(model_data["metadata"].get("training_samples")),
+            model_version=_metadata_str(model_data["metadata"].get("model_version")) or model_name,
         )
         for model_name, model_data in registry.items()
     }
@@ -1090,7 +1105,6 @@ async def predict_draft_endpoint(
             [
                 DRAFT_MODEL_PATH,
                 DRAFT_FEATURES_PATH,
-                DRAFT_META_PATH,
             ]
         )
         prediction = await run_draft_prediction(

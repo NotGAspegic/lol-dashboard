@@ -1,0 +1,17 @@
+{
+  "trained_at": "2026-04-29T03:22:39.468279+00:00",
+  "training_samples": 7673,
+  "test_auc": 0.9996726071855606,
+  "feature_names": [
+    "consecutive_losses",
+    "kda_slope",
+    "death_trend",
+    "inter_game_minutes_mean",
+    "inter_game_minutes_min",
+    "champ_variety",
+    "win_rate_window",
+    "avg_kda_window",
+    "career_kda"
+  ],
+  "model_version": "tilt_v1"
+}

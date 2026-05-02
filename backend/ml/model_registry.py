@@ -32,6 +32,15 @@ def load_tilt_feature_names() -> list[str]:
 
 @lru_cache(maxsize=1)
 def load_tilt_metadata() -> dict[str, Any]:
+    if not TILT_META_PATH.exists():
+        return {
+            "trained_at": None,
+            "training_samples": 0,
+            "test_auc": None,
+            "feature_names": load_tilt_feature_names(),
+            "model_version": "tilt_v1",
+        }
+
     return json.loads(TILT_META_PATH.read_text())
 
 
@@ -47,6 +56,15 @@ def load_draft_feature_names() -> list[str]:
 
 @lru_cache(maxsize=1)
 def load_draft_metadata() -> dict[str, Any]:
+    if not DRAFT_META_PATH.exists():
+        return {
+            "trained_at": None,
+            "training_samples": 0,
+            "test_auc": None,
+            "feature_names": load_draft_feature_names(),
+            "model_version": "draft_v1",
+        }
+
     return json.loads(DRAFT_META_PATH.read_text())
 
 
