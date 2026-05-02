@@ -27,10 +27,8 @@ try:
     from ..models.db import RankSnapshot, Summoner
     from ..ml.model_registry import (
         DRAFT_FEATURES_PATH,
-        DRAFT_META_PATH,
         DRAFT_MODEL_PATH,
         TILT_FEATURES_PATH,
-        TILT_META_PATH,
         TILT_MODEL_PATH,
         load_model_registry,
     )
@@ -46,10 +44,8 @@ except ImportError:
     from models.db import RankSnapshot, Summoner
     from ml.model_registry import (
         DRAFT_FEATURES_PATH,
-        DRAFT_META_PATH,
         DRAFT_MODEL_PATH,
         TILT_FEATURES_PATH,
-        TILT_META_PATH,
         TILT_MODEL_PATH,
         load_model_registry,
     )
