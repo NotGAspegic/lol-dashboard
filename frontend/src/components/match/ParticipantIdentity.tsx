@@ -103,16 +103,18 @@ export default function ParticipantIdentity({
 
     try {
       const response: SummonerSearchResponse = await onboardSummonerByPuuid(puuid, matchRegion);
+      const resolvedGameName = response.game_name ?? identity.gameName ?? "Untracked player";
+      const resolvedTagLine = response.tag_line ?? identity.tagLine ?? null;
       const nextHref = buildSummonerProfilePath({
         puuid: response.puuid,
         region: response.region,
-        gameName: response.game_name,
-        tagLine: response.tag_line,
+        gameName: resolvedGameName,
+        tagLine: resolvedTagLine,
       });
 
       setIdentity({
-        gameName: response.game_name,
-        tagLine: response.tag_line,
+        gameName: resolvedGameName,
+        tagLine: resolvedTagLine,
         profileHref: response.status === "ready" ? nextHref : null,
       });
       setQueued(response.status === "onboarding");
