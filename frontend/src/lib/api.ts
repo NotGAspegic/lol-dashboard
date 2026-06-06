@@ -3,31 +3,39 @@ import axios from "axios";
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 let normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
 const isLocalhostApiUrl = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(normalizedApiUrl);
+const isBrowser = typeof window !== "undefined";
 
 // Runtime fallback: when the app was built with a localhost dev API URL
 // but is running in a deployed browser environment, prefer the
 // relative `/api/v1` base so rewrites (Vercel) and proxies work.
-if (typeof window !== "undefined") {
+if (isBrowser) {
   try {
     const hostname = window.location.hostname || "";
     const isProdLike = hostname !== "localhost" && hostname !== "127.0.0.1";
     if (isProdLike && normalizedApiUrl.includes("localhost")) {
       normalizedApiUrl = "";
     }
-  } catch (e) {
+  } catch {
     // ignore and use build-time value
   }
 }
 
-// If a production build accidentally captured localhost, force the same
-// relative API path that works with Vercel rewrites.
-if (process.env.NODE_ENV === "production" && isLocalhostApiUrl) {
+if (!isBrowser && process.env.NODE_ENV === "production" && isLocalhostApiUrl) {
   normalizedApiUrl = "";
 }
 
-const apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
-  ? normalizedApiUrl
-  : `${normalizedApiUrl}/api/v1`;
+let apiBaseUrl: string;
+if (normalizedApiUrl) {
+  apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
+    ? normalizedApiUrl
+    : `${normalizedApiUrl}/api/v1`;
+} else if (!isBrowser && process.env.VERCEL_URL) {
+  apiBaseUrl = `https://${process.env.VERCEL_URL}/api/v1`;
+} else if (!isBrowser && process.env.NODE_ENV === "development") {
+  apiBaseUrl = "http://localhost:3000/api/v1";
+} else {
+  apiBaseUrl = "/api/v1";
+}
 
 const api = axios.create({
   baseURL: apiBaseUrl,
