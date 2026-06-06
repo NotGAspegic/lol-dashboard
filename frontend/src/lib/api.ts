@@ -25,12 +25,16 @@ if (!isBrowser && process.env.NODE_ENV === "production" && isLocalhostApiUrl) {
 }
 
 let apiBaseUrl: string;
-if (normalizedApiUrl) {
+if (normalizedApiUrl && normalizedApiUrl !== "/api") {
   apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
     ? normalizedApiUrl
     : `${normalizedApiUrl}/api/v1`;
+} else if (normalizedApiUrl === "/api") {
+  apiBaseUrl = "/api/v1";
 } else if (!isBrowser && process.env.VERCEL_URL) {
   apiBaseUrl = `https://${process.env.VERCEL_URL}/api/v1`;
+} else if (!isBrowser && process.env.NODE_ENV === "production") {
+  apiBaseUrl = "https://farsight-gg.vercel.app/api/v1";
 } else if (!isBrowser && process.env.NODE_ENV === "development") {
   apiBaseUrl = "http://localhost:3000/api/v1";
 } else {
