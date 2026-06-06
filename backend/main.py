@@ -6,8 +6,12 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
+
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+except ImportError:  # pragma: no cover - local dev can run without metrics installed
+    Instrumentator = None
 
 try:
     from .api.v1 import router as v1_router
@@ -64,7 +68,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-Instrumentator().instrument(app).expose(app)
+if Instrumentator is not None:
+    Instrumentator().instrument(app).expose(app)
+else:
+    logger.warning("prometheus_fastapi_instrumentator is not installed; /metrics is disabled")
 
 app.add_middleware(
     CORSMiddleware,

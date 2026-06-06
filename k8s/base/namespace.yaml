@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: farsight
+  labels:
+    app.kubernetes.io/name: farsight
+    app.kubernetes.io/part-of: farsight

@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: farsight
+  labels:
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/part-of: farsight
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker
+        app.kubernetes.io/part-of: farsight
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: worker
+          image: lol_backend:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - worker.celery_app
+            - worker
+            - -Q
+            - ingestion
+            - --loglevel=info
+            - --concurrency=4
+          envFrom:
+            - configMapRef:
+                name: farsight-config
+            - secretRef:
+                name: farsight-secrets
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: priority-worker
+  namespace: farsight
+  labels:
+    app.kubernetes.io/name: priority-worker
+    app.kubernetes.io/part-of: farsight
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: priority-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: priority-worker
+        app.kubernetes.io/part-of: farsight
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: priority-worker
+          image: lol_backend:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - worker.celery_app
+            - worker
+            - -Q
+            - refresh,priority_ingestion
+            - --loglevel=info
+            - --concurrency=2
+          envFrom:
+            - configMapRef:
+                name: farsight-config
+            - secretRef:
+                name: farsight-secrets
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beat
+  namespace: farsight
+  labels:
+    app.kubernetes.io/name: beat
+    app.kubernetes.io/part-of: farsight
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: beat
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: beat
+        app.kubernetes.io/part-of: farsight
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: beat
+          image: lol_backend:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - worker.celery_app
+            - beat
+            - --loglevel=info
+            - --schedule=/tmp/celerybeat-schedule
+          envFrom:
+            - configMapRef:
+                name: farsight-config
+            - secretRef:
+                name: farsight-secrets
+          resources:
+            requests:
+              cpu: 75m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
