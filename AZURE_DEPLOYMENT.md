@@ -93,11 +93,11 @@ POSTGRES_PASSWORD=your-secure-password-change-this
 ```bash
 cd /opt/lol-dashboard/infra
 
-# Start services in background
-docker-compose -f docker-compose.prod.yml up -d
+# Start services in background (use base + prod override)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # Verify all services are running
-docker-compose ps
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
 Expected output:
@@ -112,7 +112,7 @@ CONTAINER ID   IMAGE                          STATUS                    PORTS
 ### 3.2 Run database migrations
 ```bash
 cd /opt/lol-dashboard/infra
-docker-compose exec api alembic upgrade head
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head
 ```
 
 ### 3.3 Verify the API is running
@@ -292,8 +292,8 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/lol-dashboard/infra
-ExecStart=/usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/local/bin/docker-compose -f docker-compose.prod.yml down
+ExecStart=/usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
 Restart=on-failure
 RestartSec=10
 
@@ -317,12 +317,12 @@ sudo systemctl status farsight.service
 ```bash
 # All services
 cd /opt/lol-dashboard/infra
-docker-compose logs -f
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 # Specific service
-docker-compose logs -f api
-docker-compose logs -f worker
-docker-compose logs -f postgres
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f postgres
 ```
 
 ### 7.2 Access monitoring dashboards
@@ -348,7 +348,7 @@ docker logs -f --tail 100 lol_api
 ### 8.1 Backup database
 ```bash
 cd /opt/lol-dashboard/infra
-docker-compose exec postgres pg_dump -U loluser loldb > /backups/loldb-$(date +%Y%m%d).sql
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres pg_dump -U loluser loldb > /backups/loldb-$(date +%Y%m%d).sql
 ```
 
 ### 8.2 Set up automated backups (cron)
@@ -361,7 +361,7 @@ sudo nano /etc/cron.daily/farsight-backup
 BACKUP_DIR="/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 cd /opt/lol-dashboard/infra
-docker-compose exec -T postgres pg_dump -U loluser loldb > $BACKUP_DIR/loldb-$TIMESTAMP.sql
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres pg_dump -U loluser loldb > $BACKUP_DIR/loldb-$TIMESTAMP.sql
 # Keep only last 30 days
 find $BACKUP_DIR -name "loldb-*.sql" -mtime +30 -delete
 ```
@@ -374,11 +374,11 @@ sudo chmod +x /etc/cron.daily/farsight-backup
 ### 8.3 Update containers regularly
 ```bash
 cd /opt/lol-dashboard/infra
-docker-compose down
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
 git pull origin main
-docker-compose -f docker-compose.prod.yml build --pull
-docker-compose -f docker-compose.prod.yml up -d
-docker-compose exec api alembic upgrade head  # Run migrations if needed
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --pull
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head  # Run migrations if needed
 ```
 
 ---
@@ -419,8 +419,8 @@ services:
 
 Restart:
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
-docker-compose ps
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
 ---
@@ -429,21 +429,21 @@ docker-compose ps
 
 ### API won't start
 ```bash
-docker-compose logs api
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api
 # Check if database/redis are ready:
-docker-compose ps
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
 ### Database connection error
 ```bash
 # Test database directly
-docker-compose exec postgres psql -U loluser -d loldb -c "SELECT 1;"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U loluser -d loldb -c "SELECT 1;"
 ```
 
 ### Redis connection error
 ```bash
 # Test redis
-docker-compose exec redis redis-cli ping
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli ping
 ```
 
 ### Celery workers not processing tasks
@@ -452,7 +452,7 @@ docker-compose exec redis redis-cli ping
 # https://your-domain.com/flower/
 
 # Check worker logs
-docker-compose logs worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f worker
 ```
 
 ### Out of memory

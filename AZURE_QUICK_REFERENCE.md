@@ -38,7 +38,7 @@ sudo systemctl status farsight
 
 # 5. Run migrations
 cd /opt/lol-dashboard/infra
-docker-compose exec api alembic upgrade head
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head
 ```
 
 ---
@@ -54,11 +54,11 @@ sudo journalctl -u farsight -n 50
 
 # Check Docker Compose directly
 cd /opt/lol-dashboard/infra
-docker-compose -f docker-compose.prod.yml ps
-docker-compose logs
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs
 
 # Try starting manually to see errors
-docker-compose -f docker-compose.prod.yml up
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
 ```
 
 ### 2. API returns 502 Bad Gateway (Nginx)
@@ -85,14 +85,14 @@ sudo systemctl restart nginx
 docker ps | grep postgres
 
 # Try connecting directly
-docker-compose exec postgres psql -U loluser -d loldb -c "SELECT 1;"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U loluser -d loldb -c "SELECT 1;"
 
 # Check if volume has data
 docker volume ls
 docker inspect lol-dashboard_pgdata
 
 # Check logs
-docker-compose logs postgres
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs postgres
 ```
 
 ### 4. Redis Connection Issues
@@ -102,7 +102,7 @@ docker-compose logs postgres
 docker ps | grep redis
 
 # Try connecting
-docker-compose exec redis redis-cli ping
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli ping
 
 # Should return: PONG
 ```
@@ -111,16 +111,16 @@ docker-compose exec redis redis-cli ping
 
 ```bash
 # Check worker containers
-docker-compose ps | grep worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps | grep worker
 
 # Check worker logs
-docker-compose logs -f worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f worker
 
 # Access Flower dashboard
 # https://your-domain.com/flower/ (username/password from .env)
 
 # Check Redis for queued tasks
-docker-compose exec redis redis-cli LLEN celery
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli LLEN celery
 ```
 
 ### 6. Out of Memory
@@ -144,10 +144,10 @@ docker stats --no-stream | sort -k 4 -h
 docker stats
 
 # Check if too many Celery tasks queued
-docker-compose exec -it flower celery -A worker.celery_app inspect active
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -it flower celery -A worker.celery_app inspect active
 
 # Scale workers or check for stuck tasks
-docker-compose logs -f worker | grep ERROR
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f worker | grep ERROR
 ```
 
 ### 8. SSL Certificate Issues
@@ -202,15 +202,15 @@ sudo systemctl restart nginx
 ```bash
 # All services
 cd /opt/lol-dashboard/infra
-docker-compose logs -f
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 # Specific service
-docker-compose logs -f api
-docker-compose logs -f worker
-docker-compose logs -f postgres
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f postgres
 
 # Follow with grep
-docker-compose logs -f api | grep ERROR
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api | grep ERROR
 ```
 
 ### System Health Check
@@ -226,10 +226,10 @@ du -sh /opt/lol-dashboard
 df -h /
 
 # Database size
-docker-compose exec postgres psql -U loluser -d loldb -c "SELECT pg_size_pretty(pg_database_size('loldb'));"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U loluser -d loldb -c "SELECT pg_size_pretty(pg_database_size('loldb'));"
 
 # Redis memory
-docker-compose exec redis redis-cli INFO memory | grep used_memory_human
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli INFO memory | grep used_memory_human
 ```
 
 ### Application Health Check
@@ -263,12 +263,12 @@ curl -s http://localhost:8000/metrics | grep http_request_duration_seconds
 ```bash
 # Gentle restart (preserves data)
 cd /opt/lol-dashboard/infra
-docker-compose restart
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml restart
 
 # Full restart with migrations
-docker-compose down
-docker-compose up -d
-docker-compose exec api alembic upgrade head
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head
 ```
 
 ### Update Backend Code
@@ -278,19 +278,19 @@ git pull origin main
 
 # Rebuild containers with new code
 cd infra
-docker-compose -f docker-compose.prod.yml build --pull
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --pull
 
 # Restart
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # Run migrations if database schema changed
-docker-compose exec api alembic upgrade head
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head
 ```
 
 ### Backup Database
 ```bash
 mkdir -p /backups
-docker-compose exec postgres pg_dump -U loluser loldb > /backups/loldb-$(date +%Y%m%d-%H%M%S).sql
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres pg_dump -U loluser loldb > /backups/loldb-$(date +%Y%m%d-%H%M%S).sql
 
 # Verify backup
 ls -lh /backups/
@@ -302,18 +302,18 @@ ls -lh /backups/
 BACKUP_FILE="/backups/loldb-2024-01-15-120000.sql"
 
 # Stop API to avoid conflicts
-docker-compose down
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 # Restore
-docker-compose up -d postgres
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres
 sleep 10  # Wait for DB to start
-docker-compose exec -T postgres psql -U loluser -d loldb < $BACKUP_FILE
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U loluser -d loldb < $BACKUP_FILE
 
 # Verify
-docker-compose exec postgres psql -U loluser -d loldb -c "SELECT COUNT(*) FROM match_participants;"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U loluser -d loldb -c "SELECT COUNT(*) FROM match_participants;"
 
 # Restart all services
-docker-compose up -d
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ### Scale Workers
@@ -322,10 +322,10 @@ docker-compose up -d
 nano /opt/lol-dashboard/infra/docker-compose.prod.yml
 
 # Rebuild and restart
-docker-compose -f docker-compose.prod.yml up -d --force-recreate
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate
 
 # Verify
-docker-compose ps | grep worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps | grep worker
 ```
 
 ---
@@ -396,7 +396,7 @@ sudo systemctl start farsight
 **Horizontal (More Workers)**: If task queue backing up
 ```bash
 # Add more worker services in docker-compose.prod.yml
-# Or: docker-compose up -d --scale worker=3
+# Or: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale worker=3
 ```
 
 ### Use Managed Services
@@ -413,28 +413,28 @@ Replace self-hosted with Azure services:
 
 ### View real-time database size growth
 ```bash
-watch -n 5 'docker-compose exec postgres psql -U loluser -d loldb -c "SELECT pg_size_pretty(pg_database_size('"'"'loldb'"'"'));"'
+watch -n 5 'docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U loluser -d loldb -c "SELECT pg_size_pretty(pg_database_size('"'"'loldb'"'"'));"'
 ```
 
 ### Check Celery queue depth
 ```bash
-docker-compose exec redis redis-cli LLEN celery
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli LLEN celery
 ```
 
 ### List all queued tasks
 ```bash
-docker-compose exec -it worker celery -A worker.celery_app inspect reserved
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -it worker celery -A worker.celery_app inspect reserved
 ```
 
 ### Purge stuck tasks
 ```bash
-docker-compose exec redis redis-cli DEL celery
-docker-compose restart worker
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli DEL celery
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml restart worker
 ```
 
 ### Monitor ingestion progress
 ```bash
-docker-compose logs -f worker | grep "ingesting\|task\|match"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f worker | grep "ingesting\|task\|match"
 ```
 
 ### Check API response times

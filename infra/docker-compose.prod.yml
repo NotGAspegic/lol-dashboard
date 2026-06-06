@@ -1,3 +1,15 @@
+# This is a production override file. Use with docker-compose.yml:
+# Preferred (with base): docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# If you must run this file alone, the backend services below include a minimal build/image anchor
+
+# Minimal backend image/build anchor so services have an image or build context
+# when this file is used standalone. When used with the base file this anchor is ignored.
+x-backend-image: &backend-image
+  build:
+    context: ../backend
+    dockerfile: Dockerfile
+  image: lol_backend:prod
+
 services:
   postgres:
     restart: always
@@ -6,26 +18,42 @@ services:
     restart: always
 
   flower:
+    <<: *backend-image
     restart: always
+    working_dir: /backend
     volumes: !reset []
 
   api:
+    <<: *backend-image
     restart: always
+    container_name: lol_api
+    working_dir: /backend
     volumes: !reset []
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
+    ports:
+      - "8000:8000"
 
   worker:
+    <<: *backend-image
     restart: always
+    container_name: lol_worker
+    working_dir: /backend
     volumes: !reset []
     mem_limit: 512m
 
   priority_worker:
+    <<: *backend-image
     restart: always
+    container_name: lol_priority_worker
+    working_dir: /backend
     volumes: !reset []
     mem_limit: 512m
 
   beat:
+    <<: *backend-image
     restart: always
+    container_name: lol_beat
+    working_dir: /backend
     volumes: !reset []
 
   adminer:

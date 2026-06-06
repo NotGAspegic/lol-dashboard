@@ -113,8 +113,8 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/lol-dashboard/infra
-ExecStart=/usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/local/bin/docker-compose -f docker-compose.prod.yml down
+ExecStart=/usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
 Restart=on-failure
 RestartSec=10
 
@@ -156,7 +156,7 @@ echo "   systemctl status farsight"
 echo ""
 echo "6. Run database migrations:"
 echo "   cd /opt/lol-dashboard/infra"
-echo "   docker-compose -f docker-compose.prod.yml exec api alembic upgrade head"
+echo "   docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head"
 echo ""
 echo "7. For SSL certificate:"
 echo "   certbot certonly --nginx -d your-domain.com"
