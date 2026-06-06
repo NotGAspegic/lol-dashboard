@@ -2,6 +2,7 @@ import axios from "axios";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 let normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
+const isLocalhostApiUrl = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(normalizedApiUrl);
 
 // Runtime fallback: when the app was built with a localhost dev API URL
 // but is running in a deployed browser environment, prefer the
@@ -16,6 +17,12 @@ if (typeof window !== "undefined") {
   } catch (e) {
     // ignore and use build-time value
   }
+}
+
+// If a production build accidentally captured localhost, force the same
+// relative API path that works with Vercel rewrites.
+if (process.env.NODE_ENV === "production" && isLocalhostApiUrl) {
+  normalizedApiUrl = "";
 }
 
 const apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
