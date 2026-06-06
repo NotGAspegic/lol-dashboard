@@ -1,26 +1,38 @@
 from __future__ import annotations
 
+import importlib
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Type
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
+Instrumentator: Type[Any] | None = None
 try:
     from prometheus_fastapi_instrumentator import Instrumentator
 except ImportError:  # pragma: no cover - local dev can run without metrics installed
     Instrumentator = None
 
+api_v1_module: Any
+config_module: Any
+database_module: Any
+
 try:
-    from .api.v1 import router as v1_router
-    from .config import settings
-    from .database import engine, test_connection
+    package_name = __package__ or "backend"
+    api_v1_module = importlib.import_module(".api.v1", package=package_name)
+    config_module = importlib.import_module(".config", package=package_name)
+    database_module = importlib.import_module(".database", package=package_name)
 except ImportError:
-    from api.v1 import router as v1_router
-    from config import settings
-    from database import engine, test_connection
+    api_v1_module = importlib.import_module("api.v1")
+    config_module = importlib.import_module("config")
+    database_module = importlib.import_module("database")
+
+v1_router = api_v1_module.router
+settings = config_module.settings
+engine = database_module.engine
+test_connection = database_module.test_connection
 
 
 logger = logging.getLogger(__name__)
