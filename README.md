@@ -14,16 +14,6 @@ Additional UI snapshot:
 
 ![Farsight graph view](frontend/public/graph.png)
 
-Demo capture target for portfolio use:
-- Search a summoner
-- Let the profile load
-- Switch between tabs
-- Hover charts and match-level cards
-
-Recommended tools:
-- `LICEcap` on Windows or macOS
-- `Peek` on Linux
-
 ## Features
 
 - `🔎 Summoner Search` Search by Riot ID and onboard new profiles into the tracked dataset.
@@ -95,7 +85,7 @@ Set at least:
 
 ```env
 RIOT_API_KEY=RGAPI-your-key
-DATABASE_URL=postgresql+asyncpg://loluser:lolpassword@localhost:5432/loldb
+DATABASE_URL=postgresql+asyncpg://loluser:<password>@localhost:5432/loldb
 REDIS_URL=redis://redis:6379/0
 FRONTEND_ORIGIN=http://localhost:3000
 ```
@@ -106,7 +96,7 @@ Create infrastructure env:
 # infra/.env
 POSTGRES_DB=loldb
 POSTGRES_USER=loluser
-POSTGRES_PASSWORD=lolpassword
+POSTGRES_PASSWORD=<password>
 ```
 
 ### 2. Start local services
@@ -151,21 +141,13 @@ cd backend
 alembic upgrade head
 ```
 
-If you want to bootstrap the hypertable path explicitly:
-
-```bash
-docker compose -f infra/docker-compose.yml exec api alembic upgrade head
-docker compose -f infra/docker-compose.yml exec postgres psql -U loluser -d loldb \
-  -c "SELECT create_hypertable('match_timeline_frames', 'frame_timestamp', if_not_exists => TRUE);"
-```
-
 ### 5. Seed initial data
 
 Ingest one summoner:
 
 ```bash
 cd backend
-python ingest.py --summoner "BehindYou#Hers" --region euw1 --count 50 --queue 420
+python ingest.py --summoner "NAME#TAG" --region euw1 --count 50 --queue 420
 ```
 
 ### 6. Run the frontend
@@ -221,8 +203,6 @@ Recent local retraining and dataset build outputs produced:
 - `18,294` draft training rows with `0` missing values
 - `172` unique champions represented in source data
 - `32,082` tilt training rows built from `1,668` eligible summoners
-
-These numbers are a good starting point for portfolio copy because they are grounded in the actual project output rather than marketing estimates.
 
 ## Repo Guide
 
