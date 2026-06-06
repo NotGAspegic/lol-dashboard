@@ -1,7 +1,23 @@
 import axios from "axios";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
-const normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
+let normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
+
+// Runtime fallback: when the app was built with a localhost dev API URL
+// but is running in a deployed browser environment, prefer the
+// relative `/api/v1` base so rewrites (Vercel) and proxies work.
+if (typeof window !== "undefined") {
+  try {
+    const hostname = window.location.hostname || "";
+    const isProdLike = hostname !== "localhost" && hostname !== "127.0.0.1";
+    if (isProdLike && normalizedApiUrl.includes("localhost")) {
+      normalizedApiUrl = "";
+    }
+  } catch (e) {
+    // ignore and use build-time value
+  }
+}
+
 const apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
   ? normalizedApiUrl
   : `${normalizedApiUrl}/api/v1`;
