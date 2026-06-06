@@ -29,7 +29,7 @@ Required values:
 
 ```env
 RIOT_API_KEY=RGAPI-your-key
-DATABASE_URL=postgresql+asyncpg://loluser:lolpassword@localhost:5432/loldb
+DATABASE_URL=postgresql+asyncpg://loluser:<password>@localhost:5432/loldb
 REDIS_URL=redis://redis:6379/0
 FRONTEND_ORIGIN=http://localhost:3000
 ```
@@ -41,7 +41,7 @@ Create `infra/.env`:
 ```env
 POSTGRES_DB=loldb
 POSTGRES_USER=loluser
-POSTGRES_PASSWORD=lolpassword
+POSTGRES_PASSWORD=<password>
 ```
 
 ## Start Local Infrastructure
@@ -104,7 +104,7 @@ Run the ingestion CLI with a real Riot ID:
 
 ```bash
 cd backend
-python ingest.py --summoner "BehindYou#Hers" --region euw1 --count 50 --queue 420
+python ingest.py --summoner "NAME#TAG" --region euw1 --count 50 --queue 420
 ```
 
 You can swap in any valid Riot ID and platform region.
@@ -112,7 +112,7 @@ You can swap in any valid Riot ID and platform region.
 After ingestion, a quick verification query:
 
 ```bash
-PGPASSWORD=lolpassword psql -h localhost -U loluser -d loldb \
+PGPASSWORD=<password> psql -h localhost -U loluser -d loldb \
   -c "SELECT COUNT(*) AS match_participant_rows FROM match_participants;"
 ```
 
