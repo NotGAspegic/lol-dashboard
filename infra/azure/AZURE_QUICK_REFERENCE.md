@@ -465,5 +465,4 @@ For issues with:
 - **Nginx**: Check `/var/log/nginx/` logs
 - **Azure**: Check Azure Portal VM diagnostics
 - **SSL**: Check Certbot renewal logs
-
-Last updated: 2024
+- **General**: Check this quick reference and the full deployment guide
