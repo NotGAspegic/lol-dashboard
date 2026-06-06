@@ -2,7 +2,7 @@
 
 Deep League of Legends player analytics with timeline-aware match breakdowns, ranked profile intelligence, and ML-powered draft and tilt signals.
 
-[Live App](https://farsight-gg.vercel.app) · [Swagger API](https://farsight-production.up.railway.app/docs) · [Architecture Blueprint](blueprints/lol_dashboard_blueprint.html)
+[Live App](https://farsight-gg.vercel.app) · [Swagger API](http://farsight.westeurope.cloudapp.azure.com/docs) · [Architecture Blueprint](blueprints/lol_dashboard_blueprint.html)
 
 ## Hero
 
@@ -69,7 +69,7 @@ Blueprint:
 
 Infrastructure highlights:
 - Next.js frontend deployed on Vercel
-- FastAPI backend deployed on Railway
+- FastAPI backend hosted on Azure (currently on an Azure VM)
 - PostgreSQL + TimescaleDB for relational and time-series workloads
 - Redis for queues, caching, and rate limiting
 - Celery for ingestion fanout and scheduled refreshes
@@ -184,7 +184,7 @@ Useful local URLs:
 
 ## API Documentation
 
-- Live Swagger: https://farsight-production.up.railway.app/docs
+- Live Swagger: http://farsight.westeurope.cloudapp.azure.com/docs
 - Local Swagger: http://localhost:8000/docs
 
 The API covers:
@@ -198,7 +198,7 @@ The API covers:
 ## Deployment Notes
 
 - Frontend deploy target: `Vercel`
-- Backend deploy target: `Railway`
+- Backend host: Azure VM (current backend host is `farsight.westeurope.cloudapp.azure.com`)
 - Database: `PostgreSQL / TimescaleDB`
 - Queue + cache: `Redis`
 
@@ -211,7 +211,7 @@ Important production notes:
   - `tilt_v1_features.json`
   - `draft_v1.pkl`
   - `draft_v1_features.json`
-- Railway setup notes live in [infra/railway/README.md](infra/railway/README.md).
+- Azure backend setup notes live in [infra/azure/README.md](infra/azure/README.md).
 
 ## Results Snapshot
 

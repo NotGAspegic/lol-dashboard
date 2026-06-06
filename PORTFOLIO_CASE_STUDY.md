@@ -6,7 +6,7 @@ Farsight Analytics is a full-stack League of Legends intelligence platform focus
 
 Live project:
 - Frontend: https://farsight-gg.vercel.app
-- API docs: https://farsight-production.up.railway.app/docs
+- API docs: http://farsight.westeurope.cloudapp.azure.com/docs
 
 ## The Problem
 
@@ -76,7 +76,7 @@ High-level stack:
 - `Background jobs`: Celery + Redis
 - `Database`: PostgreSQL + TimescaleDB
 - `ML`: scikit-learn, XGBoost, pandas, SHAP
-- `Deploy`: Vercel for frontend, Railway for backend services
+- `Deploy`: Vercel for frontend, Azure for backend services (initial prototype used Railway when credits and quick setup were easiest)
 
 Blueprint:
 - [lol_dashboard_blueprint.html](blueprints/lol_dashboard_blueprint.html)
