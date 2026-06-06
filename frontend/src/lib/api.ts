@@ -1,44 +1,34 @@
 import axios from "axios";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
-let normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
-const isLocalhostApiUrl = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(normalizedApiUrl);
+const trimmedApiUrl = rawApiUrl.replace(/\/+$/, "");
+const isLocalhostApiUrl = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(trimmedApiUrl);
 const isBrowser = typeof window !== "undefined";
-
-// Runtime fallback: when the app was built with a localhost dev API URL
-// but is running in a deployed browser environment, prefer the
-// relative `/api/v1` base so rewrites (Vercel) and proxies work.
-if (isBrowser) {
-  try {
-    const hostname = window.location.hostname || "";
-    const isProdLike = hostname !== "localhost" && hostname !== "127.0.0.1";
-    if (isProdLike && normalizedApiUrl.includes("localhost")) {
-      normalizedApiUrl = "";
-    }
-  } catch {
-    // ignore and use build-time value
-  }
-}
-
-if (!isBrowser && process.env.NODE_ENV === "production" && isLocalhostApiUrl) {
-  normalizedApiUrl = "";
-}
+const hasExplicitBackendUrl = Boolean(trimmedApiUrl) && !isLocalhostApiUrl;
 
 let apiBaseUrl: string;
-if (normalizedApiUrl && normalizedApiUrl !== "/api") {
-  apiBaseUrl = normalizedApiUrl.endsWith("/api/v1")
-    ? normalizedApiUrl
-    : `${normalizedApiUrl}/api/v1`;
-} else if (normalizedApiUrl === "/api") {
-  apiBaseUrl = "/api/v1";
-} else if (!isBrowser && process.env.VERCEL_URL) {
-  apiBaseUrl = `https://${process.env.VERCEL_URL}/api/v1`;
-} else if (!isBrowser && process.env.NODE_ENV === "production") {
-  apiBaseUrl = "https://farsight-gg.vercel.app/api/v1";
-} else if (!isBrowser && process.env.NODE_ENV === "development") {
-  apiBaseUrl = "http://localhost:3000/api/v1";
+if (isBrowser) {
+  if (isLocalhostApiUrl) {
+    apiBaseUrl = trimmedApiUrl.endsWith("/api/v1")
+      ? trimmedApiUrl
+      : `${trimmedApiUrl}/api/v1`;
+  } else {
+    apiBaseUrl = "/api/v1";
+  }
 } else {
-  apiBaseUrl = "/api/v1";
+  if (hasExplicitBackendUrl) {
+    apiBaseUrl = trimmedApiUrl.endsWith("/api/v1")
+      ? trimmedApiUrl
+      : `${trimmedApiUrl}/api/v1`;
+  } else if (process.env.VERCEL_URL) {
+    apiBaseUrl = `https://${process.env.VERCEL_URL}/api/v1`;
+  } else if (process.env.NODE_ENV === "production") {
+    apiBaseUrl = "https://farsight-gg.vercel.app/api/v1";
+  } else if (process.env.NODE_ENV === "development") {
+    apiBaseUrl = "http://localhost:3000/api/v1";
+  } else {
+    apiBaseUrl = "/api/v1";
+  }
 }
 
 const api = axios.create({
