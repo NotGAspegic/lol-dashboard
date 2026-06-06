@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://farsight.westeurope.cloudapp.azure.com/api/:path*"
+      "destination": "http://farsight.westeurope.cloudapp.azure.com/:path*"
     }
   ]
 }
