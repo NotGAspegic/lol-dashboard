@@ -14,6 +14,8 @@ Additional UI snapshot:
 
 ![Farsight graph view](frontend/public/graph.png)
 
+![Farsight graph view](frontend/public/tiltfarsight.png)
+
 ## Features
 
 - `🔎 Summoner Search` Search by Riot ID and onboard new profiles into the tracked dataset.
